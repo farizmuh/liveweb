@@ -25,6 +25,8 @@ export interface MatchData {
   assignedRefereeName?: string | null;
   assignedRefereeUsername?: string | null;
   isCompleted: boolean;
+  isWaitingForNext?: boolean;
+  bracketMatchId?: string | null;
   winnerTeam?: "A" | "B" | null;
   matchPointTeam?: "A" | "B" | null;
   updatedAt: string;
@@ -201,6 +203,39 @@ export const useMatchStore = defineStore("match", () => {
     }
   }
 
+  function setCourtWaitingState(matchKey: string, isWaiting: boolean) {
+    const s = getSocketInstance();
+    if (s.connected) {
+      s.emit("court:set-waiting", { matchKey, isWaiting });
+    } else {
+      const auth = useAuthStore();
+      fetch("/api/matches/waiting", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${auth.token}`,
+        },
+        body: JSON.stringify({ matchKey, isWaiting }),
+      });
+    }
+  }
+
+  function resetUnassignedCourts() {
+    const s = getSocketInstance();
+    if (s.connected) {
+      s.emit("courts:reset-unassigned");
+    } else {
+      const auth = useAuthStore();
+      fetch("/api/matches/reset-unassigned", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${auth.token}`,
+        },
+      });
+    }
+  }
+
   function updateSettings(newSettings: Partial<SettingsData>) {
     const s = getSocketInstance();
     if (s.connected) {
@@ -233,6 +268,8 @@ export const useMatchStore = defineStore("match", () => {
     changeScore,
     resetScore,
     swapSide,
+    setCourtWaitingState,
+    resetUnassignedCourts,
     updateMatchConfig,
     updateSettings,
   };

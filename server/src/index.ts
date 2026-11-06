@@ -9,6 +9,7 @@ dotenv.config();
 
 import { setupMatchSocket } from "./sockets/matchSocket.js";
 import { matchState } from "./services/matchState.js";
+import { bracketService } from "./services/bracketService.js";
 import { requireAuth } from "./middlewares/auth.js";
 import { upload } from "./middlewares/upload.js";
 
@@ -17,6 +18,7 @@ import * as authController from "./controllers/authController.js";
 import * as teamController from "./controllers/teamController.js";
 import * as matchController from "./controllers/matchController.js";
 import * as sponsorController from "./controllers/sponsorController.js";
+import * as bracketController from "./controllers/bracketController.js";
 
 const app = express();
 const server = http.createServer(app);
@@ -67,6 +69,8 @@ app.post("/api/matches/score", requireAuth, matchController.changeScore);
 app.post("/api/matches/reset", requireAuth, matchController.resetScore);
 app.post("/api/matches/swap", requireAuth, matchController.swapSide);
 app.put("/api/matches/config", requireAuth, matchController.updateConfig);
+app.post("/api/matches/waiting", requireAuth, matchController.setWaitingState);
+app.post("/api/matches/reset-unassigned", requireAuth, matchController.resetUnassignedCourts);
 
 // Sponsor Routes
 app.get("/api/sponsors", sponsorController.getSponsorSettings);
@@ -74,11 +78,22 @@ app.put("/api/sponsors/settings", requireAuth, sponsorController.updateSettings)
 app.post("/api/sponsors", requireAuth, upload.single("logo"), sponsorController.createSponsor);
 app.delete("/api/sponsors/:id", requireAuth, sponsorController.deleteSponsor);
 
+// Tournament Bracket Routes
+app.get("/api/bracket/active", bracketController.getActiveBracket);
+app.get("/api/bracket/all", bracketController.listTournaments);
+app.post("/api/bracket/create", requireAuth, bracketController.createBracket);
+app.post("/api/bracket/shuffle", requireAuth, bracketController.shuffleBracket);
+app.post("/api/bracket/finalize", requireAuth, bracketController.finalizeBracket);
+app.post("/api/bracket/assign", requireAuth, bracketController.assignToCourt);
+app.post("/api/bracket/finish", requireAuth, bracketController.finishMatch);
+
 // Specific redirects for .html routes
 app.get("/admin.html", (_req, res) => res.redirect("/admin"));
 app.get("/overlay.html", (_req, res) => res.redirect("/overlay"));
 app.get("/overlay/bottom.html", (_req, res) => res.redirect("/overlay/bottom"));
 app.get("/overlay-bottom.html", (_req, res) => res.redirect("/overlay/bottom"));
+app.get("/overlay/bracket.html", (_req, res) => res.redirect("/overlay/bracket"));
+app.get("/bracket.html", (_req, res) => res.redirect("/bracket"));
 
 // Serve Frontend client build in production
 const clientDist = path.resolve(process.cwd(), "../client/dist");
@@ -95,6 +110,7 @@ app.get("*", (_req, res, next) => {
 // Initialize State and Listen
 async function startServer() {
   await matchState.initializeFromDB();
+  await bracketService.syncAllCourtsWithBracket();
 
   server.listen(PORT, () => {
     console.log(`=======================================================`);

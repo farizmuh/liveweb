@@ -143,6 +143,26 @@ Anda dapat memilih layout sesuai kebutuhan dan suasana siaran:
 
 ---
 
+## 🏆 Sistem Bagan Turnamen Otomatis (Tournament Bracket)
+
+Sistem ini memiliki generator bagan turnamen cerdas dan terintegrasi penuh dengan meja pertandingan live:
+
+### 1. Fitur Bagan:
+- **Dukungan Format Lengkap:** Mendukung format **Single Elimination** (Gugur Tunggal) dan **Double Elimination** (Upper & Lower Bracket + Grand Finals).
+- **Auto-BYE Dinamis:** Menyesuaikan secara otomatis dengan jumlah tim yang didaftarkan (misal 5, 6, 7 tim akan otomatis dipadatkan ke bagan 8 dengan status BYE otomatis).
+- **Acak Bagan (Random Seed):** Tombol acak susunan tim selama bagan masih berstatus *Draft*.
+- **Finalisasi Bagan:** Mengunci susunan bagan agar tidak dapat berubah/teracak lagi sebelum turnamen dimulai.
+- **Dispatch Meja (Assign Court):** Panitia / Head Referee dapat memilih match mana yang akan dimainkan di Meja mana (Meja 1, Meja 2, Meja 3, Meja 4).
+- **Live Score Sync:** Skor pada meja yang sedang bertanding otomatis tercermin secara real-time pada bagan turnamen.
+- **Selesaikan Match & Auto-Clear Meja:** Pemenang pertandingan baru akan melaju (*advance*) ke ronde berikutnya ketika tombol "Selesaikan Match" dikonfirmasi. Meja yang bersangkutan otomatis dikosongkan dan overlay di meja tersebut otomatis beralih menampilkan status **"MENUNGGU PERTANDINGAN BERIKUTNYA • MEJA SIAP"**.
+
+### 2. URL Bagan:
+- **Admin Bracket Manager:** `http://localhost:3000/bracket` (atau tab "Bagan Turnamen" di Admin Panel)
+- **Overlay Bagan OBS (1920 x 1080):** `http://localhost:3000/overlay/bracket`
+  - Sangat cocok untuk transisi jeda antar-match (intermission), caster desk, atau layar monitor penonton di arena.
+
+---
+
 ## 🎥 Cara Memasang di OBS Studio
 
 1. Buka software **OBS Studio**.

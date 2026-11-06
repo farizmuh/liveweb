@@ -123,3 +123,24 @@ export async function assignReferee(req: Request, res: Response) {
     return res.status(500).json({ error: "Gagal assign wasit." });
   }
 }
+
+export async function setWaitingState(req: Request, res: Response) {
+  try {
+    const { matchKey, isWaiting } = req.body;
+    if (!matchKey) return res.status(400).json({ error: "matchKey wajib diisi." });
+
+    matchState.setCourtWaitingState(matchKey, isWaiting ?? true);
+    return res.json({ success: true, match: matchState.getMatchByKey(matchKey) });
+  } catch (error) {
+    return res.status(500).json({ error: "Gagal mengubah status menunggu meja." });
+  }
+}
+
+export async function resetUnassignedCourts(_req: Request, res: Response) {
+  try {
+    matchState.resetUnassignedCourtsToWaiting();
+    return res.json({ success: true, matches: matchState.getAllMatches() });
+  } catch (error) {
+    return res.status(500).json({ error: "Gagal me-reset meja yang kosong." });
+  }
+}

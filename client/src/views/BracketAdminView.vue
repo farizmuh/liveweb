@@ -1,0 +1,553 @@
+<template>
+  <div class="min-h-screen bg-slate-950 text-slate-100 flex flex-col pb-12 selection:bg-amber-500 selection:text-black">
+    <!-- TOP NAVIGATION BAR -->
+    <header class="sticky top-0 z-40 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-4 py-3 shadow-lg">
+      <div class="max-w-7xl mx-auto flex items-center justify-between gap-3">
+        <!-- Brand & Title -->
+        <div class="flex items-center gap-3">
+          <router-link to="/admin" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300">
+            <ArrowLeft class="w-4 h-4" />
+          </router-link>
+          <div>
+            <div class="flex items-center gap-2">
+              <h1 class="text-sm font-extrabold uppercase tracking-wider text-white">Manajemen Bagan Turnamen</h1>
+              <span
+                v-if="tournament"
+                class="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider"
+                :class="statusBadgeClass(tournament.status)"
+              >
+                {{ tournament.status }}
+              </span>
+            </div>
+            <p class="text-[10px] text-slate-400 font-semibold">
+              {{ tournament?.name || 'Belum ada turnamen aktif' }} &bull; {{ tournament?.type === 'DOUBLE_ELIMINATION' ? 'Double Elimination' : 'Single Elimination' }}
+            </p>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex items-center gap-2">
+          <!-- Copy OBS Link -->
+          <button
+            @click="copyBracketOverlayUrl"
+            class="py-1.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 text-xs font-bold flex items-center gap-1.5 active:scale-95 transition"
+            title="Salin Link OBS Bagan"
+          >
+            <Copy class="w-3.5 h-3.5" />
+            <span class="hidden sm:inline">Link OBS Bagan</span>
+          </button>
+
+          <!-- New Bracket Button -->
+          <button
+            @click="showCreateModal = true"
+            class="py-1.5 px-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black text-xs font-black flex items-center gap-1.5 shadow-gold-glow active:scale-95 transition"
+          >
+            <Plus class="w-4 h-4" />
+            <span>Buat Bagan Baru</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- TOAST NOTIFICATION -->
+    <div
+      v-if="toastMessage"
+      class="fixed top-16 inset-x-0 mx-auto w-max z-50 px-4 py-2 rounded-xl bg-amber-500 text-black font-bold text-xs shadow-xl animate-bounce"
+    >
+      {{ toastMessage }}
+    </div>
+
+    <!-- MAIN BODY -->
+    <main class="max-w-7xl mx-auto w-full px-4 pt-4 space-y-4 flex-1">
+      
+      <!-- SUB-NAV BAR (NAVIGATION TABS) -->
+      <div class="flex items-center gap-2 p-1 bg-slate-900 rounded-xl border border-slate-800 text-xs font-bold">
+        <router-link to="/admin" class="flex-1 py-2 text-center rounded-lg text-slate-300 hover:text-white">
+          Kontrol Meja
+        </router-link>
+        <router-link to="/bracket" class="flex-1 py-2 text-center rounded-lg bg-amber-500 text-black shadow-sm">
+          Bagan Turnamen
+        </router-link>
+        <router-link to="/teams" class="flex-1 py-2 text-center rounded-lg text-slate-300 hover:text-white">
+          Database Tim
+        </router-link>
+      </div>
+
+      <!-- BRACKET CONTROLS BAR (SHUFFLE & FINALIZE) -->
+      <div v-if="tournament" class="p-4 rounded-2xl bg-slate-900 border border-slate-800 flex flex-wrap items-center justify-between gap-3 shadow-lg">
+        <div class="flex items-center gap-2 text-xs">
+          <span class="text-slate-400 font-semibold">Status Bagan:</span>
+          <b class="text-amber-300 uppercase tracking-wider">{{ tournament.status }}</b>
+          <span class="text-slate-600">&bull;</span>
+          <span class="text-slate-400">Total Match: <b>{{ tournament.matches.length }}</b></span>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <!-- SHUFFLE BUTTON (Only when DRAFT) -->
+          <button
+            v-if="tournament.status === 'DRAFT'"
+            @click="handleShuffle"
+            :disabled="actionLoading"
+            class="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 text-xs font-bold flex items-center gap-1.5 active:scale-95 transition"
+          >
+            <Shuffle class="w-3.5 h-3.5 text-amber-400" />
+            <span>Acak Tim (Shuffle)</span>
+          </button>
+
+          <!-- FINALIZE BUTTON -->
+          <button
+            v-if="tournament.status === 'DRAFT'"
+            @click="handleFinalize"
+            :disabled="actionLoading"
+            class="px-4 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black flex items-center gap-1.5 active:scale-95 transition shadow"
+          >
+            <CheckCircle2 class="w-3.5 h-3.5" />
+            <span>Kunci & Finalisasi Bagan</span>
+          </button>
+
+          <span v-else class="text-xs font-bold text-emerald-400 flex items-center gap-1">
+            <CheckCircle2 class="w-4 h-4" />
+            <span>Bagan Terkunci (Siap Ditandingkan)</span>
+          </span>
+        </div>
+      </div>
+
+      <!-- NO TOURNAMENT ALERT -->
+      <div v-if="!tournament" class="text-center py-16 p-8 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
+        <Trophy class="w-12 h-12 text-amber-400/50 mx-auto" />
+        <h3 class="text-lg font-bold text-white">Belum Ada Bagan Turnamen</h3>
+        <p class="text-xs text-slate-400 max-w-sm mx-auto">
+          Klik tombol "Buat Bagan Baru" di pojok kanan atas untuk memilih tim dan membuat bagan turnamen otomatis.
+        </p>
+      </div>
+
+      <!-- BRACKET ROUNDS VIEW -->
+      <div v-else class="space-y-4">
+        <div class="flex items-center justify-between">
+          <h2 class="text-sm font-bold text-slate-200 flex items-center gap-2">
+            <GitBranch class="w-4 h-4 text-amber-400" />
+            <span>Bagan Pertandingan (Klik 'Kirim ke Meja' untuk Menandingkan)</span>
+          </h2>
+          <span class="text-xs text-slate-400">Pemenang Otomatis Maju Saat Match Selesai</span>
+        </div>
+
+        <!-- ROUND COLUMNS CONTAINER -->
+        <div class="flex items-start gap-4 overflow-x-auto pb-6">
+          <div
+            v-for="roundObj in rounds"
+            :key="roundObj.round"
+            class="min-w-[280px] max-w-[320px] shrink-0 space-y-3"
+          >
+            <!-- Round Title Header -->
+            <div class="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-center shadow">
+              <h3 class="text-xs font-black uppercase text-amber-300 tracking-wider">
+                {{ roundObj.name }}
+              </h3>
+              <span class="text-[10px] text-slate-400 font-semibold">{{ roundObj.matches.length }} Pertandingan</span>
+            </div>
+
+            <!-- Match Nodes -->
+            <div class="space-y-3">
+              <div
+                v-for="m in roundObj.matches"
+                :key="m.id"
+                class="rounded-2xl p-3.5 bg-slate-900 border transition-all shadow-xl space-y-3 relative overflow-hidden"
+                :class="[
+                  m.status === 'LIVE' ? 'border-2 border-amber-400 shadow-gold-glow' : 'border-slate-800'
+                ]"
+              >
+                <!-- Match Status Banner -->
+                <div class="flex items-center justify-between text-[11px] pb-1 border-b border-slate-800">
+                  <span class="font-bold text-slate-400 uppercase">Match #{{ m.matchOrder }}</span>
+                  <span
+                    class="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider"
+                    :class="nodeStatusBadgeClass(m.status)"
+                  >
+                    {{ m.status }}
+                  </span>
+                </div>
+
+                <!-- Teams & Live Scores -->
+                <div class="space-y-1.5">
+                  <!-- Team A -->
+                  <div
+                    class="flex items-center justify-between p-2 rounded-xl border transition"
+                    :class="[
+                      m.winnerTeam === 'A' ? 'bg-amber-500/20 border-amber-400/60' : 'bg-slate-950/70 border-slate-800'
+                    ]"
+                  >
+                    <div class="flex items-center gap-2 overflow-hidden">
+                      <div class="w-6 h-6 rounded bg-black/60 p-0.5 border border-slate-700 flex items-center justify-center shrink-0">
+                        <img v-if="m.teamALogo" :src="m.teamALogo" class="w-full h-full object-contain" />
+                        <span v-else class="text-[9px] font-bold text-amber-400">{{ m.teamAShort?.slice(0, 3) || '?' }}</span>
+                      </div>
+                      <span class="text-xs font-bold text-white truncate max-w-[140px]">
+                        {{ m.teamAName || (m.isBye ? 'BYE' : 'TBD (Menunggu)') }}
+                      </span>
+                    </div>
+                    <span class="font-display text-lg font-black" :class="m.winnerTeam === 'A' ? 'text-amber-300' : 'text-slate-300'">
+                      {{ m.scoreA }}
+                    </span>
+                  </div>
+
+                  <!-- Team B -->
+                  <div
+                    class="flex items-center justify-between p-2 rounded-xl border transition"
+                    :class="[
+                      m.winnerTeam === 'B' ? 'bg-amber-500/20 border-amber-400/60' : 'bg-slate-950/70 border-slate-800'
+                    ]"
+                  >
+                    <div class="flex items-center gap-2 overflow-hidden">
+                      <div class="w-6 h-6 rounded bg-black/60 p-0.5 border border-slate-700 flex items-center justify-center shrink-0">
+                        <img v-if="m.teamBLogo" :src="m.teamBLogo" class="w-full h-full object-contain" />
+                        <span v-else class="text-[9px] font-bold text-amber-400">{{ m.teamBShort?.slice(0, 3) || '?' }}</span>
+                      </div>
+                      <span class="text-xs font-bold text-white truncate max-w-[140px]">
+                        {{ m.teamBName || (m.isBye ? 'BYE' : 'TBD (Menunggu)') }}
+                      </span>
+                    </div>
+                    <span class="font-display text-lg font-black" :class="m.winnerTeam === 'B' ? 'text-amber-300' : 'text-slate-300'">
+                      {{ m.scoreB }}
+                    </span>
+                  </div>
+                </div>
+
+                <!-- ACTIONS PER NODE -->
+                <!-- 1. Jika Status READY: Bisa di-assign ke meja -->
+                <div v-if="m.status === 'READY'" class="pt-1 flex items-center gap-2">
+                  <select
+                    v-model="selectedCourt[m.id]"
+                    class="flex-1 px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-xs font-semibold text-white focus:outline-none"
+                  >
+                    <option value="">-- Pilih Meja --</option>
+                    <option v-for="c in matchStore.allMatches" :key="c.matchKey" :value="c.matchKey">
+                      {{ c.courtName }}
+                    </option>
+                  </select>
+
+                  <button
+                    @click="handleAssignToCourt(m.id)"
+                    :disabled="!selectedCourt[m.id]"
+                    class="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-black text-xs disabled:opacity-30 active:scale-95 transition"
+                  >
+                    Kirim
+                  </button>
+                </div>
+
+                <!-- 2. Jika Status LIVE: Sedang tanding di meja tertentu -->
+                <div v-else-if="m.status === 'LIVE'" class="pt-1 space-y-2">
+                  <div class="flex items-center justify-between text-xs">
+                    <span class="font-bold text-emerald-400 flex items-center gap-1.5">
+                      <Radio class="w-3.5 h-3.5 animate-pulse text-red-500" />
+                      <span>Live di {{ m.assignedCourt }}</span>
+                    </span>
+                  </div>
+
+                  <!-- TOMBOL SELESAIKAN MATCH -->
+                  <button
+                    @click="handleFinishMatch(m.courtMatchKey!)"
+                    class="w-full py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs uppercase tracking-wider shadow active:scale-95 transition flex items-center justify-center gap-1.5"
+                  >
+                    <CheckCircle class="w-4 h-4" />
+                    <span>Selesaikan Match Ini</span>
+                  </button>
+                </div>
+
+                <!-- 3. Jika Status COMPLETED: Pemenang sudah lolos -->
+                <div v-else-if="m.status === 'COMPLETED'" class="text-center pt-1 text-[11px] font-bold text-emerald-400">
+                  <span v-if="m.isBye">Lolos Otomatis (BYE)</span>
+                  <span v-else>Pemenang Lolos ke Babak Berikutnya</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- MODAL BUAT BAGAN BARU -->
+    <div
+      v-if="showCreateModal"
+      class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+    >
+      <div class="w-full max-w-lg rounded-2xl bg-slate-900 border border-slate-700 p-6 shadow-2xl max-h-[90vh] flex flex-col">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-4 shrink-0">
+          <h3 class="text-base font-bold text-white flex items-center gap-2">
+            <Trophy class="w-5 h-5 text-amber-400" />
+            <span>Buat Bagan Turnamen Baru</span>
+          </h3>
+          <button @click="showCreateModal = false" class="text-slate-400 hover:text-white">
+            <X class="w-5 h-5" />
+          </button>
+        </div>
+
+        <form @submit.prevent="handleCreateBracket" class="space-y-4 overflow-y-auto flex-1 pr-1">
+          <div>
+            <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Nama Turnamen</label>
+            <input
+              v-model="newTourneyName"
+              type="text"
+              required
+              placeholder="cth: MPL COMMUNITY CUP SEASON 1"
+              class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white focus:outline-none focus:border-amber-400"
+            />
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Tipe Bagan</label>
+              <select
+                v-model="newTourneyType"
+                class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white focus:outline-none"
+              >
+                <option value="SINGLE_ELIMINATION">Single Elimination (Sistem Gugur)</option>
+                <option value="DOUBLE_ELIMINATION">Double Elimination (Upper & Lower)</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Format Pertandingan</label>
+              <select
+                v-model="newTourneyFormat"
+                class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white focus:outline-none"
+              >
+                <option value="BO1">BO1 (Best of 1)</option>
+                <option value="BO3">BO3 (Best of 3)</option>
+                <option value="BO5">BO5 (Best of 5)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- CHECKLIST TIM DARI PRESET -->
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <label class="text-xs font-bold text-slate-300 uppercase">
+                Pilih Tim Peserta (Terpilih: {{ selectedTeamIds.length }} Tim)
+              </label>
+              <button
+                type="button"
+                @click="selectAllTeams"
+                class="text-[11px] font-bold text-amber-400 hover:underline"
+              >
+                Pilih Semua
+              </button>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto p-2 rounded-xl bg-slate-950 border border-slate-800">
+              <label
+                v-for="t in teamStore.teams"
+                :key="t.id"
+                class="flex items-center gap-2 p-2 rounded-lg bg-slate-900 hover:bg-slate-850 cursor-pointer border border-transparent hover:border-slate-700 text-xs"
+              >
+                <input
+                  type="checkbox"
+                  :value="t.id"
+                  v-model="selectedTeamIds"
+                  class="rounded bg-slate-950 border-slate-700 text-amber-500"
+                />
+                <span class="font-black text-amber-300">[{{ t.shortName }}]</span>
+                <span class="truncate text-white">{{ t.name }}</span>
+              </label>
+            </div>
+            <p class="text-[11px] text-slate-400 mt-1">
+              *Jika jumlah tim ganjil/bukan pangkat 2 (misal 6 atau 10 tim), sistem otomatis membuatkan slot BYE.
+            </p>
+          </div>
+
+          <div class="pt-3 flex gap-2 shrink-0">
+            <button
+              type="button"
+              @click="showCreateModal = false"
+              class="flex-1 py-2.5 rounded-xl bg-slate-800 text-slate-300 font-bold text-xs"
+            >
+              Batal
+            </button>
+            <button
+              type="submit"
+              :disabled="selectedTeamIds.length < 2 || actionLoading"
+              class="flex-1 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-black text-xs shadow-gold-glow disabled:opacity-40"
+            >
+              {{ actionLoading ? 'Membuat Bagan...' : 'Generate Bagan' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, computed, onMounted } from "vue";
+import { useBracketStore, type BracketMatchNode } from "../stores/useBracketStore";
+import { useTeamStore } from "../stores/useTeamStore";
+import { useMatchStore } from "../stores/useMatchStore";
+import {
+  ArrowLeft,
+  Plus,
+  Trophy,
+  Copy,
+  Shuffle,
+  CheckCircle2,
+  CheckCircle,
+  GitBranch,
+  Radio,
+  X,
+} from "lucide-vue-next";
+
+const bracketStore = useBracketStore();
+const teamStore = useTeamStore();
+const matchStore = useMatchStore();
+
+const tournament = computed(() => bracketStore.tournament);
+const toastMessage = ref("");
+const actionLoading = ref(false);
+
+const showCreateModal = ref(false);
+const newTourneyName = ref("MPL COMMUNITY CUP S1");
+const newTourneyType = ref<"SINGLE_ELIMINATION" | "DOUBLE_ELIMINATION">("SINGLE_ELIMINATION");
+const newTourneyFormat = ref("BO3");
+const selectedTeamIds = ref<string[]>([]);
+const selectedCourt = ref<Record<string, string>>({});
+
+// Group matches by round for bracket columns
+const rounds = computed(() => {
+  if (!tournament.value?.matches) return [];
+
+  const map = new Map<number, { round: number; name: string; matches: BracketMatchNode[] }>();
+
+  for (const m of tournament.value.matches) {
+    if (!map.has(m.round)) {
+      map.set(m.round, {
+        round: m.round,
+        name: m.roundName,
+        matches: [],
+      });
+    }
+    map.get(m.round)!.matches.push(m);
+  }
+
+  return Array.from(map.values()).sort((a, b) => a.round - b.round);
+});
+
+onMounted(async () => {
+  await bracketStore.fetchActiveBracket();
+  await teamStore.fetchTeams();
+  matchStore.joinSuperadminRoom();
+  bracketStore.initSocket();
+
+  // Pre-select all teams
+  if (teamStore.teams.length > 0) {
+    selectedTeamIds.value = teamStore.teams.map((t) => t.id);
+  }
+});
+
+function selectAllTeams() {
+  selectedTeamIds.value = teamStore.teams.map((t) => t.id);
+}
+
+function statusBadgeClass(status: string) {
+  switch (status) {
+    case "DRAFT":
+      return "bg-amber-500/20 text-amber-300 border border-amber-400/50";
+    case "FINALIZED":
+      return "bg-blue-600/30 text-blue-300 border border-blue-400/50";
+    case "IN_PROGRESS":
+      return "bg-emerald-600/30 text-emerald-300 border border-emerald-400/50";
+    default:
+      return "bg-slate-800 text-slate-300";
+  }
+}
+
+function nodeStatusBadgeClass(status: string) {
+  switch (status) {
+    case "READY":
+      return "bg-blue-600/80 text-white";
+    case "LIVE":
+      return "bg-red-600 text-white animate-pulse shadow-red-glow";
+    case "COMPLETED":
+      return "bg-emerald-600/80 text-white";
+    default:
+      return "bg-slate-800 text-slate-400";
+  }
+}
+
+async function handleCreateBracket() {
+  if (selectedTeamIds.value.length < 2) return;
+  actionLoading.value = true;
+  try {
+    await bracketStore.createBracket({
+      name: newTourneyName.value,
+      type: newTourneyType.value,
+      format: newTourneyFormat.value,
+      teamIds: selectedTeamIds.value,
+    });
+    showCreateModal.value = false;
+    toastMessage.value = "Bagan turnamen berhasil dibuat!";
+    setTimeout(() => (toastMessage.value = ""), 2500);
+  } catch (err: any) {
+    alert(err.message || "Gagal membuat bagan.");
+  } finally {
+    actionLoading.value = false;
+  }
+}
+
+async function handleShuffle() {
+  if (!tournament.value) return;
+  actionLoading.value = true;
+  try {
+    await bracketStore.shuffleBracket(tournament.value.id);
+    toastMessage.value = "Susunan tim dalam bagan berhasil diacak!";
+    setTimeout(() => (toastMessage.value = ""), 2500);
+  } catch (err: any) {
+    alert(err.message || "Gagal mengacak tim.");
+  } finally {
+    actionLoading.value = false;
+  }
+}
+
+async function handleFinalize() {
+  if (!tournament.value) return;
+  if (!confirm("Kunci bagan ini? Setelah difinalisasi, posisi tim tidak dapat diacak lagi.")) return;
+  actionLoading.value = true;
+  try {
+    await bracketStore.finalizeBracket(tournament.value.id);
+    toastMessage.value = "Bagan turnamen resmi difinalisasi (Terkunci)!";
+    setTimeout(() => (toastMessage.value = ""), 2500);
+  } catch (err: any) {
+    alert(err.message || "Gagal memfinalisasi bagan.");
+  } finally {
+    actionLoading.value = false;
+  }
+}
+
+async function handleAssignToCourt(bracketMatchId: string) {
+  const courtKey = selectedCourt.value[bracketMatchId];
+  if (!courtKey) return;
+  try {
+    await bracketStore.assignMatchToCourt(bracketMatchId, courtKey);
+    toastMessage.value = "Pertandingan berhasil dikirim ke meja siaran!";
+    setTimeout(() => (toastMessage.value = ""), 2500);
+  } catch (err: any) {
+    alert(err.message || "Gagal mengirim ke meja.");
+  }
+}
+
+async function handleFinishMatch(courtMatchKey: string) {
+  if (!confirm("Selesaikan pertandingan ini? Pemenang akan otomatis maju di bagan, dan meja akan otomatis dikosongkan ke status menunggu.")) return;
+  try {
+    const res = await bracketStore.finishMatch(courtMatchKey);
+    toastMessage.value = res.message || "Pertandingan selesai!";
+    setTimeout(() => (toastMessage.value = ""), 3000);
+  } catch (err: any) {
+    alert(err.message || "Gagal menyelesaikan pertandingan.");
+  }
+}
+
+function copyBracketOverlayUrl() {
+  const url = `${window.location.origin}/overlay/bracket`;
+  navigator.clipboard.writeText(url);
+  toastMessage.value = "Link OBS Bagan Turnamen berhasil disalin!";
+  setTimeout(() => (toastMessage.value = ""), 2500);
+}
+</script>
+

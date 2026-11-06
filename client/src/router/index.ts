@@ -6,6 +6,8 @@ import BottomOverlayView from "../views/BottomOverlayView.vue";
 import LoginView from "../views/LoginView.vue";
 import MatchesView from "../views/MatchesView.vue";
 import TeamsView from "../views/TeamsView.vue";
+import BracketAdminView from "../views/BracketAdminView.vue";
+import BracketOverlayView from "../views/BracketOverlayView.vue";
 
 const routes = [
   {
@@ -58,6 +60,18 @@ const routes = [
     name: "teams",
     component: TeamsView,
     meta: { requiresAuth: true },
+  },
+  {
+    path: "/bracket",
+    name: "bracket-admin",
+    component: BracketAdminView,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/overlay/bracket",
+    name: "overlay-bracket",
+    component: BracketOverlayView,
+    meta: { layout: "clean" },
   },
 ];
 

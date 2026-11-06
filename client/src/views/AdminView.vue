@@ -105,6 +105,12 @@
           🎮 Kontrol Detail Match
         </button>
         <router-link
+          to="/bracket"
+          class="flex-1 py-2 text-center rounded-lg text-slate-300 hover:text-white"
+        >
+          🏆 Bagan Turnamen
+        </router-link>
+        <router-link
           to="/teams"
           class="flex-1 py-2 text-center rounded-lg text-slate-300 hover:text-white"
         >
@@ -119,14 +125,25 @@
             <LayoutGrid class="w-4 h-4 text-amber-400" />
             <span>Pemantauan Langsung 4 Pertandingan Paralel</span>
           </h2>
-          <span class="text-xs text-slate-400">Live Sync 4 Komputer Siaran</span>
+          <div class="flex items-center gap-2">
+            <button
+              @click="matchStore.resetUnassignedCourts()"
+              class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 text-xs font-bold border border-slate-700 flex items-center gap-1.5 transition active:scale-95"
+              title="Set semua meja yang tidak punya bracket match ke mode menunggu"
+            >
+              <Clock class="w-3.5 h-3.5 text-amber-400" />
+              <span>Kosongkan Meja Standby</span>
+            </button>
+            <span class="text-xs text-slate-400 hidden sm:inline">Live Sync 4 Komputer</span>
+          </div>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div
             v-for="m in matchStore.allMatches"
             :key="m.matchKey"
-            class="rounded-2xl p-4 bg-slate-900/90 border border-slate-800 hover:border-slate-700 shadow-xl space-y-3 relative overflow-hidden"
+            class="rounded-2xl p-4 bg-slate-900/90 border shadow-xl space-y-3 relative overflow-hidden transition"
+            :class="m.isWaitingForNext ? 'border-amber-500/30 bg-slate-900/60' : 'border-slate-800 hover:border-slate-700'"
           >
             <!-- Card Header -->
             <div class="flex items-center justify-between pb-2 border-b border-slate-800">
@@ -135,10 +152,33 @@
                   {{ m.courtName }}
                 </span>
                 <span class="text-xs font-bold text-slate-300">{{ m.format }}</span>
+                <!-- Status Standby / Live -->
+                <span
+                  v-if="m.isWaitingForNext"
+                  class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold text-[10px] uppercase flex items-center gap-1"
+                >
+                  <Clock class="w-2.5 h-2.5 animate-pulse" />
+                  STANDBY
+                </span>
+                <span
+                  v-else
+                  class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold text-[10px] uppercase flex items-center gap-1"
+                >
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+                  LIVE
+                </span>
               </div>
 
-              <!-- Copy OBS Links per court (Top & Bottom) -->
+              <!-- Quick actions: Set Standby / Aktifkan & Copy OBS Links -->
               <div class="flex items-center gap-1.5">
+                <button
+                  @click="matchStore.setCourtWaitingState(m.matchKey, !m.isWaitingForNext)"
+                  class="px-2 py-1 rounded-lg text-[11px] font-bold border flex items-center gap-1 transition active:scale-95"
+                  :class="m.isWaitingForNext ? 'bg-emerald-950/40 text-emerald-300 border-emerald-700/50 hover:bg-emerald-900/60' : 'bg-amber-950/40 text-amber-300 border-amber-700/50 hover:bg-amber-900/60'"
+                  :title="m.isWaitingForNext ? 'Aktifkan meja ini' : 'Kosongkan meja dan tampilkan overlay Menunggu Match'"
+                >
+                  <span>{{ m.isWaitingForNext ? 'Aktifkan' : 'Kosongkan' }}</span>
+                </button>
                 <button
                   @click="copyKeyUrl(m.matchKey)"
                   class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-400 text-[11px] font-bold border border-slate-700 flex items-center gap-1 active:scale-95"
@@ -164,8 +204,32 @@
               <span>Wasit: <b class="text-white">{{ m.assignedRefereeName || m.assignedRefereeUsername || 'Belum di-assign' }}</b></span>
             </div>
 
-            <!-- Teams & Live Scores with inline +/- controls -->
-            <div class="grid grid-cols-2 gap-2 bg-slate-950/80 p-3 rounded-xl border border-slate-800/80">
+            <!-- A. JIKA MEJA KOSONG / STANDBY: TAMPILKAN STATUS MENUNGGU -->
+            <div
+              v-if="m.isWaitingForNext"
+              class="bg-slate-950/80 border border-amber-500/30 rounded-xl p-4 flex flex-col items-center justify-center text-center space-y-2 py-5"
+            >
+              <div class="flex items-center gap-2 text-amber-400 font-extrabold text-xs uppercase tracking-wider">
+                <Clock class="w-4 h-4 animate-pulse text-amber-400" />
+                <span>MEJA KOSONG &bull; MENUNGGU PERTANDINGAN</span>
+              </div>
+              <p class="text-[11px] text-slate-400 max-w-xs leading-relaxed">
+                Overlay OBS menampilkan banner <b>"MENUNGGU PERTANDINGAN BERIKUTNYA"</b>.
+              </p>
+              <router-link
+                to="/bracket"
+                class="px-3 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-400/40 text-[11px] font-bold transition flex items-center gap-1"
+              >
+                <span>Tugaskan Match dari Bagan</span>
+                <span>&rarr;</span>
+              </router-link>
+            </div>
+
+            <!-- B. JIKA MEJA SEDANG AKTIF: TAMPILKAN TIM & SKOR LIVE -->
+            <div
+              v-else
+              class="grid grid-cols-2 gap-2 bg-slate-950/80 p-3 rounded-xl border border-slate-800/80"
+            >
               <!-- Team Blue -->
               <div class="space-y-1">
                 <span class="text-[10px] font-black text-blue-400 uppercase tracking-wider">TIM A (BIRU)</span>
@@ -234,8 +298,43 @@
           </select>
         </div>
 
+        <!-- WAITING STATE BANNER -->
+        <div
+          v-if="matchStore.match?.isWaitingForNext"
+          class="p-4 rounded-2xl bg-amber-950/40 border-2 border-amber-500/60 flex items-center justify-between gap-3 shadow-lg"
+        >
+          <div class="flex items-center gap-3">
+            <Clock class="w-6 h-6 text-amber-400 animate-pulse" />
+            <div>
+              <h4 class="text-xs font-black uppercase text-amber-300">Meja Ini Sedang Kosong (Stand By)</h4>
+              <p class="text-[11px] text-slate-300">Layar OBS saat ini menampilkan status 'Menunggu Match Berikutnya'.</p>
+            </div>
+          </div>
+          <router-link
+            to="/bracket"
+            class="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black text-xs font-black shadow active:scale-95 transition"
+          >
+            Pilih Match dari Bagan &rarr;
+          </router-link>
+        </div>
+
         <!-- KONTROL SKOR UTAMA (TOUCH FRIENDLY) -->
         <ScoreController />
+
+        <!-- TOMBOL SELESAIKAN PERTANDINGAN -->
+        <div class="p-3 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-between gap-3 shadow">
+          <div>
+            <h4 class="text-xs font-bold text-white">Selesaikan Pertandingan Ini</h4>
+            <p class="text-[10px] text-slate-400">Pemenang akan maju di bagan dan meja akan otomatis dikosongkan.</p>
+          </div>
+          <button
+            @click="handleFinishMatchCurrentCourt"
+            class="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:brightness-110 text-white font-black text-xs shadow active:scale-95 transition flex items-center gap-1.5"
+          >
+            <CheckCircle class="w-4 h-4" />
+            <span>Selesaikan Match</span>
+          </button>
+        </div>
 
         <!-- PENGATURAN MATCH & TIM PRESET -->
         <MatchConfigForm />
@@ -257,11 +356,12 @@
 import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useMatchStore, type MatchData } from "../stores/useMatchStore";
+import { useBracketStore } from "../stores/useBracketStore";
 import { useAuthStore } from "../stores/useAuthStore";
 import ScoreController from "../components/admin/ScoreController.vue";
 import MatchConfigForm from "../components/admin/MatchConfigForm.vue";
 import SponsorControl from "../components/admin/SponsorControl.vue";
-import { Copy, LogOut, LayoutGrid } from "lucide-vue-next";
+import { Copy, LogOut, LayoutGrid, Clock, CheckCircle } from "lucide-vue-next";
 
 const matchStore = useMatchStore();
 const authStore = useAuthStore();
@@ -339,6 +439,22 @@ function onSwitchCourt(e: Event) {
   if (target) {
     matchStore.match = target;
     matchStore.joinMatchRoom(key);
+  }
+}
+
+const bracketStore = useBracketStore();
+
+async function handleFinishMatchCurrentCourt() {
+  const key = matchStore.activeKey || matchStore.match?.matchKey;
+  if (!key) return;
+  if (!confirm("Selesaikan pertandingan ini? Pemenang akan otomatis maju di bagan turnamen, dan meja ini akan otomatis dikosongkan ke status menunggu.")) return;
+
+  try {
+    const res = await bracketStore.finishMatch(key);
+    toastMessage.value = res.message || "Pertandingan selesai!";
+    setTimeout(() => (toastMessage.value = ""), 3000);
+  } catch (err: any) {
+    alert(err.message || "Gagal menyelesaikan pertandingan.");
   }
 }
 

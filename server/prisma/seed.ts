@@ -111,12 +111,17 @@ async function main() {
     },
   ];
 
-  for (const pm of parallelMatches) {
+  for (let i = 0; i < parallelMatches.length; i++) {
+    const pm = parallelMatches[i];
+    // Hanya Court 1 yang aktif jika diperlukan, Court 2, 3, 4 diset standby menunggu match
+    const isWaiting = i > 0;
+
     await prisma.match.upsert({
       where: { matchKey: pm.matchKey },
       update: {
         courtName: pm.courtName,
         assignedRefereeId: pm.referee.id,
+        isWaitingForNext: isWaiting,
         isActive: true,
       },
       create: {
@@ -134,10 +139,11 @@ async function main() {
         teamBShort: pm.teamB?.shortName || "B",
         scoreB: 0,
         assignedRefereeId: pm.referee.id,
+        isWaitingForNext: isWaiting,
         isActive: true,
       },
     });
-    console.log(`🏟️  Parallel Match Seeded: ${pm.courtName} -> Key: ${pm.matchKey} -> Assigned to: ${pm.referee.username}`);
+    console.log(`🏟️  Parallel Match Seeded: ${pm.courtName} -> Key: ${pm.matchKey} -> Assigned to: ${pm.referee.username} (Waiting: ${isWaiting})`);
   }
 
   // 5. Global Settings

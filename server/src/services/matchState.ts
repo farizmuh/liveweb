@@ -29,6 +29,8 @@ export interface ActiveMatchState {
   assignedRefereeName?: string | null;
   assignedRefereeUsername?: string | null;
   isCompleted: boolean;
+  isWaitingForNext?: boolean;
+  bracketMatchId?: string | null;
   winnerTeam?: "A" | "B" | null;
   matchPointTeam?: "A" | "B" | null;
   updatedAt: string;
@@ -188,6 +190,8 @@ class MatchStateManager {
           assignedRefereeName: m.assignedReferee?.name,
           assignedRefereeUsername: m.assignedReferee?.username,
           isCompleted: m.isCompleted,
+          isWaitingForNext: m.isWaitingForNext,
+          bracketMatchId: m.bracketMatchId,
           winnerTeam: m.winnerTeam as any,
           matchPointTeam: null,
           updatedAt: m.updatedAt.toISOString(),
@@ -271,6 +275,8 @@ class MatchStateManager {
             teamBLogo: match.teamB.logoUrl,
             scoreB: match.teamB.score,
             isCompleted: match.isCompleted,
+            isWaitingForNext: match.isWaitingForNext ?? false,
+            bracketMatchId: match.bracketMatchId ?? null,
             winnerTeam: match.winnerTeam,
             assignedRefereeId: match.assignedRefereeId,
           },
@@ -333,6 +339,40 @@ class MatchStateManager {
     this.updateMatchStatus(match);
     this.broadcast(matchKey);
     this.schedulePersistence(matchKey);
+  }
+
+  public setCourtWaitingState(matchKey: string, isWaiting: boolean) {
+    const match = this.matches.get(matchKey);
+    if (!match) return;
+
+    match.isWaitingForNext = isWaiting;
+    if (isWaiting) {
+      match.teamA.name = "TBD (Menunggu)";
+      match.teamA.shortName = "TBD";
+      match.teamA.logoUrl = null;
+      match.teamA.score = 0;
+
+      match.teamB.name = "TBD (Menunggu)";
+      match.teamB.shortName = "TBD";
+      match.teamB.logoUrl = null;
+      match.teamB.score = 0;
+
+      match.isCompleted = false;
+      match.winnerTeam = null;
+      match.matchPointTeam = null;
+      match.bracketMatchId = null;
+    }
+
+    this.broadcast(matchKey);
+    this.schedulePersistence(matchKey);
+  }
+
+  public resetUnassignedCourtsToWaiting() {
+    for (const match of this.matches.values()) {
+      if (!match.bracketMatchId) {
+        this.setCourtWaitingState(match.matchKey, true);
+      }
+    }
   }
 
   public updateMatchConfig(matchKey: string, config: any) {

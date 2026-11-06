@@ -30,7 +30,28 @@
       <span>Menghubungkan ke Match [{{ currentKey }}]...</span>
     </div>
 
-    <!-- 3. TAMPILAN SCOREBOARD RESMI DENGAN MATCH KEY TERTENTU -->
+    <!-- 3. JIKA SEDANG MENUNGGU MATCH BERIKUTNYA DARI BAGAN TURNAMEN -->
+    <div
+      v-else-if="match.isWaitingForNext"
+      class="w-full h-24 metallic-card rounded-2xl border-2 border-amber-400 shadow-gold-glow flex items-center justify-between px-8 overflow-hidden relative"
+    >
+      <div class="flex items-center gap-4 z-10">
+        <div class="w-12 h-12 rounded-xl bg-amber-500/20 border-2 border-amber-400 flex items-center justify-center text-amber-300">
+          <Clock class="w-7 h-7 animate-pulse text-amber-400" />
+        </div>
+        <div>
+          <span class="text-xs font-black uppercase tracking-widest text-amber-300">[{{ match.courtName }}] &bull; STAND BY</span>
+          <h2 class="text-2xl font-black uppercase text-white tracking-wider font-display drop-shadow">
+            MENUNGGU MATCH BERIKUTNYA
+          </h2>
+        </div>
+      </div>
+      <div class="px-4 py-1.5 rounded-xl bg-black/70 border border-amber-400/60 text-xs font-bold text-slate-300 uppercase tracking-widest">
+        Bagan Turnamen Sedang Berlangsung
+      </div>
+    </div>
+
+    <!-- 4. TAMPILAN SCOREBOARD RESMI DENGAN MATCH KEY TERTENTU -->
     <div v-else class="w-full flex flex-col items-center">
       <!-- Tournament & Round Mini Header -->
       <div class="px-6 py-1 bg-black/90 border-t border-x border-amber-500/50 rounded-t-md flex items-center gap-3 text-[11px] font-extrabold uppercase tracking-[0.2em] text-amber-300 shadow-md">
@@ -41,43 +62,46 @@
       </div>
 
       <!-- Main Scoreboard Container (Mobile Legibility Enhanced) -->
-      <div class="w-full h-[90px] metallic-card rounded-2xl border-2 border-amber-500/60 flex items-stretch overflow-hidden relative shadow-2xl">
+      <div class="w-full h-[90px] metallic-card shimmer-sweep rounded-2xl border-2 border-amber-500/60 flex items-stretch overflow-hidden relative shadow-2xl">
         
         <!-- Left Wing: Blue Team -->
-        <div class="flex-1 bg-team-blue flex items-center justify-between px-6 relative overflow-hidden">
+        <div class="flex-1 bg-team-blue aura-blue flex items-center justify-between px-3.5 relative overflow-hidden transition-all duration-300">
           <div class="absolute inset-0 bg-gradient-to-r from-blue-900/60 to-transparent pointer-events-none"></div>
 
           <!-- Team Identity -->
-          <div class="flex items-center gap-4 z-10">
-            <div class="w-15 h-15 rounded-xl p-1 bg-black/60 border-2 border-blue-400/80 flex items-center justify-center shadow-lg">
+          <div class="flex items-center gap-2.5 z-10 min-w-0 flex-1 mr-2">
+            <div class="w-13 h-13 shrink-0 rounded-xl p-1 bg-black/60 border-2 border-blue-400/80 logo-ring-blue flex items-center justify-center shadow-lg transition-transform hover:scale-105">
               <img
                 v-if="match.teamA.logoUrl"
                 :src="match.teamA.logoUrl"
                 :alt="match.teamA.name"
-                class="w-12 h-12 object-contain"
+                class="w-10 h-10 object-contain"
               />
               <div
                 v-else
-                class="w-12 h-12 rounded-lg bg-blue-600 flex items-center justify-center font-black text-white text-lg font-display"
+                class="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center font-black text-white text-sm font-display"
               >
                 {{ match.teamA.shortName.slice(0, 3) }}
               </div>
             </div>
 
-            <div class="flex flex-col justify-center">
-              <div v-if="match.matchPointTeam === 'A'" class="mb-0.5">
-                <MatchPointBadge :active="true" />
-              </div>
-              <h2 class="text-2xl md:text-3xl font-black uppercase tracking-wider text-white truncate max-w-[250px] font-rajdhani drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)] leading-tight">
+            <div class="min-w-0 flex-1 flex flex-col justify-center overflow-hidden">
+              <h2
+                class="font-black uppercase text-white truncate font-rajdhani drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)] leading-tight whitespace-nowrap"
+                :class="getTeamNameClass(match.teamA.name)"
+              >
                 {{ match.teamA.name }}
               </h2>
             </div>
           </div>
 
           <!-- Gems & Score Number -->
-          <div class="flex items-center gap-4 z-10">
+          <div class="flex items-center gap-2.5 z-10 shrink-0">
             <GemPoints :format="match.format" :score="match.teamA.score" side="left" size="md" />
-            <div class="w-14 text-center text-6xl font-black font-display text-white drop-shadow-[0_2px_12px_rgba(255,255,255,0.6)]">
+            <div
+              class="w-12 shrink-0 text-center text-5xl md:text-6xl font-black font-display text-white drop-shadow-[0_2px_12px_rgba(255,255,255,0.6)]"
+              :class="{ 'score-pop': scoreAPopping }"
+            >
               {{ match.teamA.score }}
             </div>
           </div>
@@ -97,41 +121,44 @@
         </div>
 
         <!-- Right Wing: Red Team -->
-        <div class="flex-1 bg-team-red flex items-center justify-between px-6 relative overflow-hidden">
+        <div class="flex-1 bg-team-red aura-red flex items-center justify-between px-3.5 relative overflow-hidden transition-all duration-300">
           <div class="absolute inset-0 bg-gradient-to-l from-red-900/60 to-transparent pointer-events-none"></div>
 
           <!-- Score Number & Gems -->
-          <div class="flex items-center gap-4 z-10">
-            <div class="w-14 text-center text-6xl font-black font-display text-white drop-shadow-[0_2px_12px_rgba(255,255,255,0.6)]">
+          <div class="flex items-center gap-2.5 z-10 shrink-0">
+            <div
+              class="w-12 shrink-0 text-center text-5xl md:text-6xl font-black font-display text-white drop-shadow-[0_2px_12px_rgba(255,255,255,0.6)]"
+              :class="{ 'score-pop': scoreBPopping }"
+            >
               {{ match.teamB.score }}
             </div>
             <GemPoints :format="match.format" :score="match.teamB.score" side="right" size="md" />
           </div>
 
           <!-- Team Identity -->
-          <div class="flex items-center gap-4 z-10 flex-row-reverse text-right">
-            <div class="w-15 h-15 rounded-xl p-1 bg-black/60 border-2 border-red-400/80 flex items-center justify-center shadow-lg">
+          <div class="flex items-center gap-2.5 z-10 min-w-0 flex-1 ml-2 justify-end">
+            <div class="min-w-0 flex-1 flex flex-col items-end justify-center text-right overflow-hidden">
+              <h2
+                class="font-black uppercase text-white truncate font-rajdhani drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)] leading-tight text-right w-full whitespace-nowrap"
+                :class="getTeamNameClass(match.teamB.name)"
+              >
+                {{ match.teamB.name }}
+              </h2>
+            </div>
+
+            <div class="w-13 h-13 shrink-0 rounded-xl p-1 bg-black/60 border-2 border-red-400/80 logo-ring-red flex items-center justify-center shadow-lg transition-transform hover:scale-105">
               <img
                 v-if="match.teamB.logoUrl"
                 :src="match.teamB.logoUrl"
                 :alt="match.teamB.name"
-                class="w-12 h-12 object-contain"
+                class="w-10 h-10 object-contain"
               />
               <div
                 v-else
-                class="w-12 h-12 rounded-lg bg-red-600 flex items-center justify-center font-black text-white text-lg font-display"
+                class="w-10 h-10 rounded-lg bg-red-600 flex items-center justify-center font-black text-white text-sm font-display"
               >
                 {{ match.teamB.shortName.slice(0, 3) }}
               </div>
-            </div>
-
-            <div class="flex flex-col items-end justify-center">
-              <div v-if="match.matchPointTeam === 'B'" class="mb-0.5">
-                <MatchPointBadge :active="true" />
-              </div>
-              <h2 class="text-2xl md:text-3xl font-black uppercase tracking-wider text-white truncate max-w-[250px] font-rajdhani drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)] leading-tight">
-                {{ match.teamB.name }}
-              </h2>
             </div>
           </div>
         </div>
@@ -161,7 +188,7 @@ import GemPoints from "../components/overlay/GemPoints.vue";
 import MatchPointBadge from "../components/overlay/MatchPointBadge.vue";
 import WinnerOverlay from "../components/overlay/WinnerOverlay.vue";
 import SponsorTicker from "../components/overlay/SponsorTicker.vue";
-import { KeyRound } from "lucide-vue-next";
+import { KeyRound, Clock } from "lucide-vue-next";
 
 const route = useRoute();
 const matchStore = useMatchStore();
@@ -172,10 +199,47 @@ const baseUrl = ref(window.location.origin);
 const match = computed(() => matchStore.match);
 const settings = computed(() => matchStore.settings);
 
+// Option A: Score Pop & Neon Flash Burst Animation
+const scoreAPopping = ref(false);
+const scoreBPopping = ref(false);
+
+watch(
+  () => match.value?.teamA.score,
+  (newVal, oldVal) => {
+    if (oldVal !== undefined && newVal !== oldVal) {
+      scoreAPopping.value = true;
+      setTimeout(() => {
+        scoreAPopping.value = false;
+      }, 800);
+    }
+  }
+);
+
+watch(
+  () => match.value?.teamB.score,
+  (newVal, oldVal) => {
+    if (oldVal !== undefined && newVal !== oldVal) {
+      scoreBPopping.value = true;
+      setTimeout(() => {
+        scoreBPopping.value = false;
+      }, 800);
+    }
+  }
+);
+
 const winningTeam = computed(() => {
   if (!match.value || !match.value.isCompleted || !match.value.winnerTeam) return null;
   return match.value.winnerTeam === "A" ? match.value.teamA : match.value.teamB;
 });
+
+function getTeamNameClass(name?: string) {
+  if (!name) return "text-xl md:text-2xl tracking-wider";
+  const len = name.length;
+  if (len >= 17) return "text-sm md:text-base tracking-tight";
+  if (len >= 13) return "text-base md:text-lg tracking-normal";
+  if (len >= 9) return "text-lg md:text-xl tracking-wide";
+  return "text-xl md:text-2xl tracking-wider";
+}
 
 function initOverlayKey() {
   const queryKey = (route.query.key as string) || (route.params.key as string);

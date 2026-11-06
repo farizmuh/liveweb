@@ -1,8 +1,10 @@
 import { Server as SocketIOServer, Socket } from "socket.io";
 import { matchState } from "../services/matchState.js";
+import { bracketService } from "../services/bracketService.js";
 
 export function setupMatchSocket(io: SocketIOServer) {
   matchState.setSocketServer(io);
+  bracketService.setSocketServer(io);
 
   io.on("connection", (socket: Socket) => {
     // 1. Client joins a specific match room (by matchKey)
@@ -29,10 +31,19 @@ export function setupMatchSocket(io: SocketIOServer) {
       });
     });
 
-    // 3. Score Actions scoped by matchKey
-    socket.on("score:change", ({ matchKey, team, delta }: { matchKey: string; team: "A" | "B"; delta: number }) => {
+    // 3. Client joins bracket room (for OBS bracket overlay or Admin bracket view)
+    socket.on("join:bracket", async ({ tournamentId }: { tournamentId?: string }) => {
+      socket.join("bracket_room");
+      const tournament = await bracketService.getTournamentBracket(tournamentId);
+      socket.emit("bracket:init", { tournament });
+    });
+
+    // 4. Score Actions scoped by matchKey
+    socket.on("score:change", async ({ matchKey, team, delta }: { matchKey: string; team: "A" | "B"; delta: number }) => {
       if (!matchKey) return;
       matchState.updateScore(matchKey, team, delta);
+      // Synchronize live score to bracket if match is linked
+      await bracketService.syncLiveScoreFromCourt(matchKey);
     });
 
     socket.on("score:reset", ({ matchKey }: { matchKey: string }) => {
@@ -48,6 +59,15 @@ export function setupMatchSocket(io: SocketIOServer) {
     socket.on("config:update", ({ matchKey, config }: { matchKey: string; config: any }) => {
       if (!matchKey) return;
       matchState.updateMatchConfig(matchKey, config);
+    });
+
+    socket.on("court:set-waiting", ({ matchKey, isWaiting }: { matchKey: string; isWaiting: boolean }) => {
+      if (!matchKey) return;
+      matchState.setCourtWaitingState(matchKey, isWaiting);
+    });
+
+    socket.on("courts:reset-unassigned", () => {
+      matchState.resetUnassignedCourtsToWaiting();
     });
 
     socket.on("settings:update", (newSettings) => {
