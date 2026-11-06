@@ -68,12 +68,12 @@ export async function finalizeBracket(req: Request, res: Response) {
 
 export async function assignToCourt(req: Request, res: Response) {
   try {
-    const { bracketMatchId, courtMatchKey } = req.body;
+    const { bracketMatchId, courtMatchKey, format } = req.body;
     if (!bracketMatchId || !courtMatchKey) {
       return res.status(400).json({ error: "bracketMatchId dan courtMatchKey diperlukan." });
     }
 
-    const result = await bracketService.assignMatchToCourt(bracketMatchId, courtMatchKey);
+    const result = await bracketService.assignMatchToCourt(bracketMatchId, courtMatchKey, format);
     return res.json({
       message: `Pertandingan berhasil dikirim ke ${result.court?.courtName}!`,
       result,

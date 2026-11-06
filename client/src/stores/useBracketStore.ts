@@ -159,7 +159,7 @@ export const useBracketStore = defineStore("bracket", () => {
     return data;
   }
 
-  async function assignMatchToCourt(bracketMatchId: string, courtMatchKey: string) {
+  async function assignMatchToCourt(bracketMatchId: string, courtMatchKey: string, format?: string) {
     const authStore = useAuthStore();
     const res = await fetch("/api/bracket/assign", {
       method: "POST",
@@ -167,7 +167,7 @@ export const useBracketStore = defineStore("bracket", () => {
         "Content-Type": "application/json",
         Authorization: `Bearer ${authStore.token}`,
       },
-      body: JSON.stringify({ bracketMatchId, courtMatchKey }),
+      body: JSON.stringify({ bracketMatchId, courtMatchKey, format }),
     });
 
     const data = await res.json();

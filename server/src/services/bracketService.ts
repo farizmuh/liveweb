@@ -71,9 +71,11 @@ class BracketService {
     teamIds: string[];
     format?: "BO1" | "BO3" | "BO5" | "BO7";
   }) {
-    const teams = await prisma.team.findMany({
+    const teamRecords = await prisma.team.findMany({
       where: { id: { in: data.teamIds } },
     });
+    const teamMap = new Map(teamRecords.map((t) => [t.id, t]));
+    const teams = data.teamIds.map((id) => teamMap.get(id)).filter(Boolean);
 
     if (teams.length < 2) {
       throw new Error("Paling sedikit 2 tim harus didaftarkan untuk membuat braket turnamen.");
@@ -194,10 +196,14 @@ class BracketService {
           teamAName: teamA?.name || (teamA ? "TEAM A" : "BYE"),
           teamAShort: teamA?.shortName || (teamA ? "A" : "BYE"),
           teamALogo: teamA?.logoUrl || null,
+          scoreA: 0,
           teamBId: teamB?.id || null,
           teamBName: teamB?.name || (teamB ? "TEAM B" : "BYE"),
           teamBShort: teamB?.shortName || (teamB ? "B" : "BYE"),
           teamBLogo: teamB?.logoUrl || null,
+          scoreB: 0,
+          assignedCourt: null,
+          courtMatchKey: null,
           isBye,
           status,
           winnerTeam,
@@ -366,14 +372,46 @@ class BracketService {
       [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
 
-    const teams = await prisma.team.findMany({
+    // Ambil data tim dan pertahankan URUTAN hasil acak Fisher-Yates
+    const teamRecords = await prisma.team.findMany({
       where: { id: { in: shuffled } },
+    });
+    const teamMap = new Map(teamRecords.map((t) => [t.id, t]));
+    const teams = shuffled.map((id) => teamMap.get(id)).filter(Boolean);
+
+    // Reset ronde lanjutan (Round > 1 atau non-UPPER) dari seeded BYE sebelumnya
+    await prisma.bracketMatch.updateMany({
+      where: {
+        tournamentId,
+        OR: [
+          { round: { gt: 1 } },
+          { section: { not: "UPPER" } },
+        ],
+      },
+      data: {
+        teamAId: null,
+        teamAName: null,
+        teamAShort: null,
+        teamALogo: null,
+        scoreA: 0,
+        teamBId: null,
+        teamBName: null,
+        teamBShort: null,
+        teamBLogo: null,
+        scoreB: 0,
+        status: "PENDING",
+        winnerTeam: null,
+        winnerTeamId: null,
+        assignedCourt: null,
+        courtMatchKey: null,
+      },
     });
 
     // Re-seed Round 1
     const bracketSize = this.getBracketSize(teams.length);
     await this.seedRound1(tournamentId, round1Matches, teams, bracketSize);
 
+    await this.syncAllCourtsWithBracket(tournamentId);
     this.broadcastBracket(tournamentId);
     return this.getTournamentBracket(tournamentId);
   }
@@ -390,7 +428,11 @@ class BracketService {
   }
 
   // 4. Assign Bracket Match to Court (Kirim ke Meja)
-  public async assignMatchToCourt(bracketMatchId: string, courtMatchKey: string) {
+  public async assignMatchToCourt(
+    bracketMatchId: string,
+    courtMatchKey: string,
+    format?: "BO1" | "BO3" | "BO5" | "BO7"
+  ) {
     const bracketMatch = await prisma.bracketMatch.findUnique({
       where: { id: bracketMatchId },
       include: { tournament: true },
@@ -404,11 +446,13 @@ class BracketService {
     const court = matchState.getMatchByKey(courtMatchKey);
     if (!court) throw new Error("Meja/Court pertandingan tidak ditemukan.");
 
+    const matchFormat = (format || bracketMatch.tournament.format || "BO3") as "BO1" | "BO3" | "BO5" | "BO7";
+
     // Update Court live state
     matchState.updateMatchConfig(courtMatchKey, {
       tournamentName: bracketMatch.tournament.name,
       roundName: bracketMatch.roundName,
-      format: bracketMatch.tournament.format,
+      format: matchFormat,
       teamA: {
         id: bracketMatch.teamAId,
         name: bracketMatch.teamAName || "TEAM A",

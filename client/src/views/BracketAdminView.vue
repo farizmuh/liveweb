@@ -83,20 +83,36 @@
         </div>
 
         <div class="flex items-center gap-2">
-          <!-- SHUFFLE BUTTON (Only when DRAFT) -->
-          <button
-            v-if="tournament.status === 'DRAFT'"
-            @click="handleShuffle"
-            :disabled="actionLoading"
-            class="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 text-xs font-bold flex items-center gap-1.5 active:scale-95 transition"
-          >
-            <Shuffle class="w-3.5 h-3.5 text-amber-400" />
-            <span>Acak Tim (Shuffle)</span>
-          </button>
+          <!-- ROULETTE CONTINUOUS SHUFFLE BUTTONS (Only when DRAFT) -->
+          <div v-if="tournament.status === 'DRAFT'" class="flex items-center gap-2">
+            <!-- Button 1: Start Rolling -->
+            <button
+              v-if="!isRolling"
+              @click="startRoulette"
+              :disabled="actionLoading"
+              class="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 text-xs font-bold flex items-center gap-1.5 active:scale-95 transition shadow-sm"
+              title="Mulai pengacakan rolet berkelanjutan dengan suara dramatis"
+            >
+              <Shuffle class="w-3.5 h-3.5 text-amber-400" />
+              <span>Acak Tim (Rolet)</span>
+            </button>
+
+            <!-- Button 2: Stop & Lock In (Pulsing Red) -->
+            <button
+              v-else
+              @click="stopRoulette"
+              :disabled="isStopping"
+              class="px-4 py-1.5 rounded-xl bg-red-600 hover:bg-red-500 text-white border border-red-400 text-xs font-black flex items-center gap-2 shadow-red-glow animate-pulse active:scale-95 transition"
+              title="Hentikan rolet dan kunci susunan tim"
+            >
+              <Square class="w-3 h-3 fill-current" />
+              <span>{{ isStopping ? 'Mengunci Hasil Rolet...' : '🛑 Berhenti & Kunci' }}</span>
+            </button>
+          </div>
 
           <!-- FINALIZE BUTTON -->
           <button
-            v-if="tournament.status === 'DRAFT'"
+            v-if="tournament.status === 'DRAFT' && !isRolling"
             @click="handleFinalize"
             :disabled="actionLoading"
             class="px-4 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black flex items-center gap-1.5 active:scale-95 transition shadow"
@@ -153,7 +169,11 @@
                 :key="m.id"
                 class="rounded-2xl p-3.5 bg-slate-900 border transition-all shadow-xl space-y-3 relative overflow-hidden"
                 :class="[
-                  m.status === 'LIVE' ? 'border-2 border-amber-400 shadow-gold-glow' : 'border-slate-800'
+                  isRolling && roundObj.round === 1
+                    ? 'border-2 border-amber-400 shadow-gold-glow animate-pulse'
+                    : m.status === 'LIVE'
+                    ? 'border-2 border-amber-400 shadow-gold-glow'
+                    : 'border-slate-800'
                 ]"
               >
                 <!-- Match Status Banner -->
@@ -163,7 +183,7 @@
                     class="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider"
                     :class="nodeStatusBadgeClass(m.status)"
                   >
-                    {{ m.status }}
+                    {{ isRolling && roundObj.round === 1 ? 'ROLLING...' : m.status }}
                   </span>
                 </div>
 
@@ -178,11 +198,11 @@
                   >
                     <div class="flex items-center gap-2 overflow-hidden">
                       <div class="w-6 h-6 rounded bg-black/60 p-0.5 border border-slate-700 flex items-center justify-center shrink-0">
-                        <img v-if="m.teamALogo" :src="m.teamALogo" class="w-full h-full object-contain" />
-                        <span v-else class="text-[9px] font-bold text-amber-400">{{ m.teamAShort?.slice(0, 3) || '?' }}</span>
+                        <img v-if="getNodeTeam(m, 'A').logoUrl" :src="getNodeTeam(m, 'A').logoUrl" class="w-full h-full object-contain" />
+                        <span v-else class="text-[9px] font-bold text-amber-400">{{ getNodeTeam(m, 'A').shortName?.slice(0, 3) || '?' }}</span>
                       </div>
                       <span class="text-xs font-bold text-white truncate max-w-[140px]">
-                        {{ m.teamAName || (m.isBye ? 'BYE' : 'TBD (Menunggu)') }}
+                        {{ getNodeTeam(m, 'A').name || (m.isBye ? 'BYE' : 'TBD (Menunggu)') }}
                       </span>
                     </div>
                     <span class="font-display text-lg font-black" :class="m.winnerTeam === 'A' ? 'text-amber-300' : 'text-slate-300'">
@@ -199,11 +219,11 @@
                   >
                     <div class="flex items-center gap-2 overflow-hidden">
                       <div class="w-6 h-6 rounded bg-black/60 p-0.5 border border-slate-700 flex items-center justify-center shrink-0">
-                        <img v-if="m.teamBLogo" :src="m.teamBLogo" class="w-full h-full object-contain" />
-                        <span v-else class="text-[9px] font-bold text-amber-400">{{ m.teamBShort?.slice(0, 3) || '?' }}</span>
+                        <img v-if="getNodeTeam(m, 'B').logoUrl" :src="getNodeTeam(m, 'B').logoUrl" class="w-full h-full object-contain" />
+                        <span v-else class="text-[9px] font-bold text-amber-400">{{ getNodeTeam(m, 'B').shortName?.slice(0, 3) || '?' }}</span>
                       </div>
                       <span class="text-xs font-bold text-white truncate max-w-[140px]">
-                        {{ m.teamBName || (m.isBye ? 'BYE' : 'TBD (Menunggu)') }}
+                        {{ getNodeTeam(m, 'B').name || (m.isBye ? 'BYE' : 'TBD (Menunggu)') }}
                       </span>
                     </div>
                     <span class="font-display text-lg font-black" :class="m.winnerTeam === 'B' ? 'text-amber-300' : 'text-slate-300'">
@@ -214,10 +234,24 @@
 
                 <!-- ACTIONS PER NODE -->
                 <!-- 1. Jika Status READY: Bisa di-assign ke meja -->
-                <div v-if="m.status === 'READY'" class="pt-1 flex items-center gap-2">
+                <div v-if="m.status === 'READY'" class="pt-1 flex items-center gap-1.5">
+                  <!-- Pilihan Format BO (BO1, BO3, BO5, BO7) -->
+                  <select
+                    :value="selectedFormat[m.id] || tournament.format || 'BO3'"
+                    @input="selectedFormat[m.id] = ($event.target as HTMLSelectElement).value"
+                    class="w-20 px-2 py-1.5 rounded-lg bg-slate-950 border border-amber-500/50 text-amber-300 font-black text-xs focus:outline-none shrink-0"
+                    title="Pilih Format BO untuk match ini"
+                  >
+                    <option value="BO1">BO1</option>
+                    <option value="BO3">BO3</option>
+                    <option value="BO5">BO5</option>
+                    <option value="BO7">BO7</option>
+                  </select>
+
+                  <!-- Pilihan Meja -->
                   <select
                     v-model="selectedCourt[m.id]"
-                    class="flex-1 px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-xs font-semibold text-white focus:outline-none"
+                    class="flex-1 px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-xs font-semibold text-white focus:outline-none min-w-0"
                   >
                     <option value="">-- Pilih Meja --</option>
                     <option v-for="c in matchStore.allMatches" :key="c.matchKey" :value="c.matchKey">
@@ -228,7 +262,7 @@
                   <button
                     @click="handleAssignToCourt(m.id)"
                     :disabled="!selectedCourt[m.id]"
-                    class="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-black text-xs disabled:opacity-30 active:scale-95 transition"
+                    class="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-black text-xs disabled:opacity-30 active:scale-95 transition shrink-0 shadow-sm"
                   >
                     Kirim
                   </button>
@@ -392,7 +426,87 @@ import {
   GitBranch,
   Radio,
   X,
+  Square,
 } from "lucide-vue-next";
+
+// Web Audio API Synthesizer for Esports Roulette SFX (Zero-dependency & 0ms latency)
+class BracketAudioFX {
+  private ctx: AudioContext | null = null;
+
+  private getContext(): AudioContext | null {
+    try {
+      if (!this.ctx) {
+        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+        if (AudioCtx) this.ctx = new AudioCtx();
+      }
+      if (this.ctx && this.ctx.state === "suspended") {
+        this.ctx.resume();
+      }
+      return this.ctx;
+    } catch {
+      return null;
+    }
+  }
+
+  // Mechanical tick for rapid roulette spin
+  public playTick(pitch: number = 750) {
+    try {
+      const ctx = this.getContext();
+      if (!ctx) return;
+
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(pitch, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(140, ctx.currentTime + 0.035);
+
+      gain.gain.setValueAtTime(0.18, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.035);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start();
+      osc.stop(ctx.currentTime + 0.035);
+    } catch {
+      // Audio autoplay policy fallback
+    }
+  }
+
+  // Victorious / lock-in chime sound (golden arpeggio)
+  public playLockChime() {
+    try {
+      const ctx = this.getContext();
+      if (!ctx) return;
+
+      const now = ctx.currentTime;
+      const notes = [523.25, 659.25, 783.99, 1046.5]; // C5, E5, G5, C6
+
+      notes.forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(freq, now + i * 0.08);
+
+        gain.gain.setValueAtTime(0, now + i * 0.08);
+        gain.gain.linearRampToValueAtTime(0.25, now + i * 0.08 + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.08 + 0.65);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start(now + i * 0.08);
+        osc.stop(now + i * 0.08 + 0.65);
+      });
+    } catch {
+      // Audio policy fallback
+    }
+  }
+}
+
+const audioFX = new BracketAudioFX();
 
 const bracketStore = useBracketStore();
 const teamStore = useTeamStore();
@@ -408,6 +522,7 @@ const newTourneyType = ref<"SINGLE_ELIMINATION" | "DOUBLE_ELIMINATION">("SINGLE_
 const newTourneyFormat = ref("BO3");
 const selectedTeamIds = ref<string[]>([]);
 const selectedCourt = ref<Record<string, string>>({});
+const selectedFormat = ref<Record<string, string>>({});
 
 // Group matches by round for bracket columns
 const rounds = computed(() => {
@@ -491,18 +606,126 @@ async function handleCreateBracket() {
   }
 }
 
-async function handleShuffle() {
-  if (!tournament.value) return;
-  actionLoading.value = true;
+// ==========================================
+// ROULETTE CONTINUOUS SHUFFLE & DECELERATION
+// ==========================================
+const isRolling = ref(false);
+const isStopping = ref(false);
+let rollTimer: any = null;
+const rollingSlots = ref<Record<string, { teamA: any; teamB: any }>>({});
+
+function getNodeTeam(m: BracketMatchNode, slot: "A" | "B") {
+  if (isRolling.value && rollingSlots.value[m.id]) {
+    const rTeam = slot === "A" ? rollingSlots.value[m.id].teamA : rollingSlots.value[m.id].teamB;
+    if (rTeam) return rTeam;
+  }
+  return {
+    logoUrl: slot === "A" ? m.teamALogo : m.teamBLogo,
+    shortName: slot === "A" ? m.teamAShort : m.teamBShort,
+    name: slot === "A" ? m.teamAName : m.teamBName,
+  };
+}
+
+function startRoulette() {
+  if (!tournament.value || tournament.value.status !== "DRAFT") return;
+
+  const round1Matches = tournament.value.matches.filter((m) => m.round === 1);
+  const allTeams: any[] = [];
+
+  for (const m of round1Matches) {
+    if (m.teamAId || (m.teamAName && m.teamAName !== "BYE")) {
+      allTeams.push({
+        id: m.teamAId,
+        name: m.teamAName,
+        shortName: m.teamAShort,
+        logoUrl: m.teamALogo,
+      });
+    }
+    if (m.teamBId || (m.teamBName && m.teamBName !== "BYE")) {
+      allTeams.push({
+        id: m.teamBId,
+        name: m.teamBName,
+        shortName: m.teamBShort,
+        logoUrl: m.teamBLogo,
+      });
+    }
+  }
+
+  if (allTeams.length < 2) return;
+
+  isRolling.value = true;
+  isStopping.value = false;
+
+  const cycleShuffle = () => {
+    const shuffled = [...allTeams].sort(() => Math.random() - 0.5);
+    const newSlots: Record<string, { teamA: any; teamB: any }> = {};
+
+    round1Matches.forEach((m, idx) => {
+      newSlots[m.id] = {
+        teamA: shuffled[idx * 2] || null,
+        teamB: shuffled[idx * 2 + 1] || null,
+      };
+    });
+
+    rollingSlots.value = newSlots;
+    audioFX.playTick(650 + Math.random() * 250);
+  };
+
+  cycleShuffle();
+  rollTimer = setInterval(cycleShuffle, 75);
+}
+
+async function stopRoulette() {
+  if (!isRolling.value || isStopping.value) return;
+  isStopping.value = true;
+  clearInterval(rollTimer);
+
+  const round1Matches = tournament.value?.matches.filter((m) => m.round === 1) || [];
+  const allTeams: any[] = [];
+  for (const m of round1Matches) {
+    if (m.teamAId || (m.teamAName && m.teamAName !== "BYE")) {
+      allTeams.push({ id: m.teamAId, name: m.teamAName, shortName: m.teamAShort, logoUrl: m.teamALogo });
+    }
+    if (m.teamBId || (m.teamBName && m.teamBName !== "BYE")) {
+      allTeams.push({ id: m.teamBId, name: m.teamBName, shortName: m.teamBShort, logoUrl: m.teamBLogo });
+    }
+  }
+
+  // Efek Deselerasi Halus (Putaran melambat bertahap ~1.5 detik)
+  const decelSteps = [100, 140, 200, 280, 400, 580];
+  for (let i = 0; i < decelSteps.length; i++) {
+    await new Promise((resolve) => setTimeout(resolve, decelSteps[i]));
+    const shuffled = [...allTeams].sort(() => Math.random() - 0.5);
+    const newSlots: Record<string, { teamA: any; teamB: any }> = {};
+    round1Matches.forEach((m, idx) => {
+      newSlots[m.id] = {
+        teamA: shuffled[idx * 2] || null,
+        teamB: shuffled[idx * 2 + 1] || null,
+      };
+    });
+    rollingSlots.value = newSlots;
+    audioFX.playTick(600 - i * 65);
+  }
+
+  // Kunci final di backend
   try {
-    await bracketStore.shuffleBracket(tournament.value.id);
-    toastMessage.value = "Susunan tim dalam bagan berhasil diacak!";
-    setTimeout(() => (toastMessage.value = ""), 2500);
+    if (tournament.value) {
+      await bracketStore.shuffleBracket(tournament.value.id);
+    }
+    audioFX.playLockChime();
+    toastMessage.value = "🎉 Susunan Tim Resmi Terkunci!";
+    setTimeout(() => (toastMessage.value = ""), 3000);
   } catch (err: any) {
     alert(err.message || "Gagal mengacak tim.");
   } finally {
-    actionLoading.value = false;
+    rollingSlots.value = {};
+    isRolling.value = false;
+    isStopping.value = false;
   }
+}
+
+async function handleShuffle() {
+  startRoulette();
 }
 
 async function handleFinalize() {
@@ -523,9 +746,10 @@ async function handleFinalize() {
 async function handleAssignToCourt(bracketMatchId: string) {
   const courtKey = selectedCourt.value[bracketMatchId];
   if (!courtKey) return;
+  const format = selectedFormat.value[bracketMatchId] || tournament.value?.format || "BO3";
   try {
-    await bracketStore.assignMatchToCourt(bracketMatchId, courtKey);
-    toastMessage.value = "Pertandingan berhasil dikirim ke meja siaran!";
+    await bracketStore.assignMatchToCourt(bracketMatchId, courtKey, format);
+    toastMessage.value = `Pertandingan (${format}) berhasil dikirim ke meja siaran!`;
     setTimeout(() => (toastMessage.value = ""), 2500);
   } catch (err: any) {
     alert(err.message || "Gagal mengirim ke meja.");
