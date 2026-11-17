@@ -6,6 +6,16 @@ export function setupMatchSocket(io: SocketIOServer) {
   matchState.setSocketServer(io);
   bracketService.setSocketServer(io);
 
+  // Batasi koneksi Socket.io maksimal 30 koneksi bersamaan (hemat proses & resource hosting)
+  const MAX_SOCKET_CONNECTIONS = 30;
+  io.use((socket, next) => {
+    const currentCount = io.engine.clientsCount;
+    if (currentCount > MAX_SOCKET_CONNECTIONS) {
+      return next(new Error("Kapasitas server penuh (maksimal 30 koneksi live)."));
+    }
+    next();
+  });
+
   io.on("connection", (socket: Socket) => {
     // 1. Client joins a specific match room (by matchKey)
     socket.on("join:match", ({ matchKey }: { matchKey: string }) => {

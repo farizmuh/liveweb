@@ -1,0 +1,18 @@
+# ========================================================
+# CLOUDLINUX PASSENGER - RESOURCE OPTIMIZATION (20-30 NPROC LIMIT)
+# ========================================================
+
+# Batasi maksimal 1 Node process worker (asynchronous, cukup untuk puluhan request)
+PassengerMaxInstances 1
+
+# Izinkan proses mati (scale-down ke 0 proses) saat tidak ada pengunjung
+PassengerMinInstances 0
+
+# Matikan proses Node jika menganggur (idle) selama 300 detik (5 menit)
+PassengerPoolIdleTime 300
+
+# Batasi antrean request maksimal 30
+PassengerMaxRequestQueueSize 30
+
+PassengerAppType node
+PassengerStartupFile app.js

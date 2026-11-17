@@ -85,8 +85,31 @@ fs.writeFileSync(path.resolve(outDir, "package.json"), JSON.stringify(prodPkg, n
 // Buat template .env produksi
 fs.writeFileSync(
   path.resolve(outDir, ".env"),
-  `PORT=3000\nNODE_ENV=production\nDATABASE_URL="mysql://USER_DB:PASSWORD_DB@localhost:3306/NAMA_DB"\nJWT_SECRET="kunci-rahasia-esports-${Date.now()}"\nCORS_ORIGIN="*"\n`
+  `PORT=3000\nNODE_ENV=production\nDATABASE_URL="mysql://USER_DB:PASSWORD_DB@localhost:3306/NAMA_DB?connection_limit=5&pool_timeout=10"\nJWT_SECRET="kunci-rahasia-esports-${Date.now()}"\nCORS_ORIGIN="*"\n`
 );
+
+// Buat file .htaccess untuk membatasi proses di cPanel CloudLinux Passenger
+const htaccessContent = `# ========================================================
+# CLOUDLINUX PASSENGER - RESOURCE OPTIMIZATION (20-30 NPROC LIMIT)
+# ========================================================
+
+# Batasi maksimal 1 Node process worker (asynchronous, cukup untuk puluhan request)
+PassengerMaxInstances 1
+
+# Izinkan proses mati (scale-down ke 0 proses) saat tidak ada pengunjung
+PassengerMinInstances 0
+
+# Matikan proses Node jika menganggur (idle) selama 300 detik (5 menit)
+PassengerPoolIdleTime 300
+
+# Batasi antrean request maksimal 30
+PassengerMaxRequestQueueSize 30
+
+PassengerAppType node
+PassengerStartupFile app.js
+`;
+
+fs.writeFileSync(path.resolve(outDir, ".htaccess"), htaccessContent);
 
 // 5. Install production dependencies langsung di deploy_hosting
 console.log("\n[5/6] Menginstall dependensi produksi saja (~50MB, tanpa TypeScript/Vite)...");

@@ -5,9 +5,16 @@ declare global {
   var prisma: PrismaClient | undefined;
 }
 
+let dbUrl = process.env.DATABASE_URL;
+if (dbUrl && !dbUrl.includes("connection_limit")) {
+  const separator = dbUrl.includes("?") ? "&" : "?";
+  dbUrl = `${dbUrl}${separator}connection_limit=5&pool_timeout=10`;
+}
+
 export const prisma =
   global.prisma ||
   new PrismaClient({
+    datasources: dbUrl ? { db: { url: dbUrl } } : undefined,
     log: process.env.NODE_ENV === "development" ? ["warn", "error"] : ["error"],
   });
 

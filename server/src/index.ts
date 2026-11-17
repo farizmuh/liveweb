@@ -140,5 +140,23 @@ async function startServer() {
   });
 }
 
+// Graceful shutdown saat Passenger mematikan proses karena idle / timeout
+async function handleShutdown(signal: string) {
+  console.log(`[Server] Menerima sinyal ${signal}. Menutup koneksi database dan socket secara bersih...`);
+  try {
+    io.close();
+    server.close();
+    const { prisma } = await import("./config/db.js");
+    await prisma.$disconnect();
+  } catch (err) {
+    console.error("[Server] Error saat shutdown:", err);
+  } finally {
+    process.exit(0);
+  }
+}
+
+process.on("SIGINT", () => handleShutdown("SIGINT"));
+process.on("SIGTERM", () => handleShutdown("SIGTERM"));
+
 startServer();
 
