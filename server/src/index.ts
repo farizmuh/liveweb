@@ -3,9 +3,17 @@ import http from "http";
 import { Server as SocketIOServer } from "socket.io";
 import cors from "cors";
 import path from "path";
+import fs from "fs";
 import dotenv from "dotenv";
+import { fileURLToPath } from "url";
 
-dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Muat .env dengan fallback path absolut (karena cPanel Passenger sering beda CWD)
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
+dotenv.config({ path: path.resolve(__dirname, ".env") });
+dotenv.config({ path: path.resolve(process.cwd(), ".env") });
 
 import { setupMatchSocket } from "./sockets/matchSocket.js";
 import { matchState } from "./services/matchState.js";
@@ -96,14 +104,25 @@ app.get("/overlay/bracket.html", (_req, res) => res.redirect("/overlay/bracket")
 app.get("/bracket.html", (_req, res) => res.redirect("/bracket"));
 
 // Serve Frontend client build in production
-const clientDist = path.resolve(process.cwd(), "../client/dist");
+const publicFromDirname = path.resolve(__dirname, "../public");
+const localPublicDir = fs.existsSync(publicFromDirname)
+  ? publicFromDirname
+  : path.resolve(process.cwd(), "public");
+const clientDist = fs.existsSync(localPublicDir)
+  ? localPublicDir
+  : path.resolve(process.cwd(), "../client/dist");
+
 app.use(express.static(clientDist));
 app.get("*", (_req, res, next) => {
   if (_req.path.startsWith("/api") || _req.path.startsWith("/uploads")) {
     return next();
   }
   res.sendFile(path.join(clientDist, "index.html"), (err) => {
-    if (err) next();
+    if (err) {
+      // In development (when client/dist is not built), redirect to the Vite frontend server
+      const clientOrigin = process.env.CORS_ORIGIN || "http://localhost:5173";
+      return res.redirect(`${clientOrigin}${_req.originalUrl}`);
+    }
   });
 });
 

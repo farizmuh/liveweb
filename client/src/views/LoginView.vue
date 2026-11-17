@@ -66,15 +66,6 @@
           <span v-else>Masuk ke Panel Kontrol</span>
         </button>
       </form>
-
-      <div class="mt-6 pt-5 border-t border-slate-800 text-center space-y-1">
-        <p class="text-[11px] text-slate-400 font-medium">
-          Akun Superadmin: <span class="text-amber-400 font-mono">admin</span> / <span class="text-amber-400 font-mono">admin123</span>
-        </p>
-        <p class="text-[10px] text-slate-400">
-          Akun Wasit Meja 1 - 4: <span class="text-blue-400 font-mono">wasit1</span> s/d <span class="text-blue-400 font-mono">wasit4</span> (Password: <span class="text-blue-400 font-mono">wasit123</span>)
-        </p>
-      </div>
     </div>
   </div>
 </template>

@@ -1,0 +1,178 @@
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-1.1.x", "debian-openssl-3.0.x", "rhel-openssl-1.0.x", "rhel-openssl-3.0.x"]
+}
+
+enum Role {
+  SUPERADMIN
+  REFEREE
+}
+
+enum BoFormat {
+  BO1
+  BO3
+  BO5
+  BO7
+}
+
+enum BracketType {
+  SINGLE_ELIMINATION
+  DOUBLE_ELIMINATION
+}
+
+enum BracketStatus {
+  DRAFT
+  FINALIZED
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum BracketSection {
+  UPPER
+  LOWER
+  GRAND_FINAL
+}
+
+enum MatchNodeStatus {
+  PENDING
+  READY
+  LIVE
+  COMPLETED
+}
+
+model User {
+  id              String   @id @default(uuid())
+  username        String   @unique
+  password        String
+  name            String
+  role            Role     @default(REFEREE)
+  assignedMatches Match[]  @relation("AssignedReferee")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Team {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  shortName String
+  logoUrl   String?
+  colorHex  String?  @default("#2563eb")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  matchesAsA        Match[]        @relation("TeamA")
+  matchesAsB        Match[]        @relation("TeamB")
+  bracketMatchesAsA BracketMatch[] @relation("BracketTeamA")
+  bracketMatchesAsB BracketMatch[] @relation("BracketTeamB")
+}
+
+model Tournament {
+  id        String         @id @default(uuid())
+  name      String         @default("MPL INDONESIA COMMUNITY CUP")
+  type      BracketType    @default(SINGLE_ELIMINATION)
+  status    BracketStatus  @default(DRAFT)
+  format    BoFormat       @default(BO3)
+  matches   BracketMatch[]
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+}
+
+model BracketMatch {
+  id             String          @id @default(uuid())
+  tournamentId   String
+  tournament     Tournament      @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  round          Int             // 1, 2, 3, etc.
+  roundName      String          // "Round 1", "Quarterfinals", "Semifinals", "Grand Finals", etc.
+  section        BracketSection  @default(UPPER)
+  matchOrder     Int             // Order in this round (1, 2, 3...)
+
+  teamAId        String?
+  teamA          Team?           @relation("BracketTeamA", fields: [teamAId], references: [id], onDelete: SetNull)
+  teamAName      String?
+  teamAShort     String?
+  teamALogo      String?
+  scoreA         Int             @default(0)
+
+  teamBId        String?
+  teamB          Team?           @relation("BracketTeamB", fields: [teamBId], references: [id], onDelete: SetNull)
+  teamBName      String?
+  teamBShort     String?
+  teamBLogo      String?
+  scoreB         Int             @default(0)
+
+  isBye          Boolean         @default(false)
+  winnerTeam     String?         // "A" or "B"
+  winnerTeamId   String?
+  status         MatchNodeStatus @default(PENDING)
+
+  // Progression links
+  nextMatchId    String?         // Which BracketMatch the winner moves to
+  nextMatchSlot  String?         // "A" or "B"
+  loserMatchId   String?         // For double elimination: where the loser drops to
+  loserMatchSlot String?         // "A" or "B"
+
+  // Live court assignment
+  assignedCourt  String?         // e.g. "Court 1", "Court 2"
+  courtMatchKey  String?         // e.g. "match-c1-8f3a9b"
+
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+}
+
+model Match {
+  id                 String    @id @default(uuid())
+  matchKey           String    @unique // e.g. match-8f3a9b untuk OBS /overlay?key=match-8f3a9b
+  courtName          String    @default("Court 1") // e.g. "Court 1", "Court 2"
+  tournamentName     String    @default("MPL INDONESIA")
+  roundName          String    @default("REGULAR SEASON")
+  format             BoFormat  @default(BO3)
+
+  teamAId            String?
+  teamA              Team?     @relation("TeamA", fields: [teamAId], references: [id], onDelete: SetNull)
+  teamAName          String    @default("BLUE TEAM")
+  teamAShort         String    @default("BLUE")
+  teamALogo          String?
+  scoreA             Int       @default(0)
+
+  teamBId            String?
+  teamB              Team?     @relation("TeamB", fields: [teamBId], references: [id], onDelete: SetNull)
+  teamBName          String    @default("RED TEAM")
+  teamBShort         String    @default("RED")
+  teamBLogo          String?
+  scoreB             Int       @default(0)
+
+  assignedRefereeId  String?
+  assignedReferee    User?     @relation("AssignedReferee", fields: [assignedRefereeId], references: [id], onDelete: SetNull)
+
+  isActive           Boolean   @default(true)
+  isCompleted        Boolean   @default(false)
+  isWaitingForNext   Boolean   @default(false) // If true, overlay shows "WAITING FOR NEXT MATCH"
+  bracketMatchId     String?   // Linked bracket node ID
+  winnerTeam         String?
+
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+}
+
+model Sponsor {
+  id        String   @id @default(uuid())
+  name      String
+  logoUrl   String?
+  order     Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Setting {
+  id          String   @id @default("global_config")
+  tickerText  String   @default("Welcome to the Tournament! • Subscribe & Follow our Social Media")
+  showTicker  Boolean  @default(true)
+  showSponsor Boolean  @default(false)
+  updatedAt   DateTime @updatedAt
+}

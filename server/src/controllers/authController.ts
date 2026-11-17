@@ -46,9 +46,12 @@ export async function login(req: Request, res: Response) {
         name: user.name,
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Login error:", error);
-    return res.status(500).json({ error: "Terjadi kesalahan internal server." });
+    return res.status(500).json({ 
+      error: "Terjadi kesalahan internal server.",
+      details: error?.message || String(error)
+    });
   }
 }
 

@@ -2,9 +2,19 @@
   "name": "esports-scoreboard-root",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "scripts": {
+    "dev": "node dev.js",
     "dev:server": "cd server && npm run dev",
-    "dev:client": "cd client && npm run dev"
+    "dev:client": "cd client && npm run dev",
+    "setup:db": "cd server && npx prisma db push && npm run prisma:seed",
+    "db:push": "cd server && npx prisma db push",
+    "db:seed": "cd server && npm run prisma:seed",
+    "install:all": "npm install && cd server && npm install && cd ../client && npm install",
+    "build:client": "cd client && npm run build",
+    "build:server": "cd server && npm run build",
+    "build": "npm run build:client && npm run build:server",
+    "build:hosting": "node package-hosting.js",
+    "start": "cd server && npm start"
   }
 }
-

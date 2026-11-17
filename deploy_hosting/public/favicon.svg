@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <polygon points="50,5 95,25 95,75 50,95 5,75 5,25" fill="#0b0f19" stroke="#f59e0b" stroke-width="4"/>
+  <text x="50%" y="60%" text-anchor="middle" font-family="sans-serif" font-weight="900" font-size="34" fill="#ffd700">M</text>
+</svg>
+
