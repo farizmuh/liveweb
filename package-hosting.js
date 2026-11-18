@@ -105,15 +105,19 @@ fs.writeFileSync(
 );
 
 // Buat file .htaccess yang efektif untuk LiteSpeed + Passenger di cPanel
-const htaccessContent = `# ==================================================================
+const htaccessContent = `# DO NOT REMOVE. CLOUDLINUX PASSENGER CONFIGURATION BEGIN
+PassengerAppRoot "/home/ykxyeguk/live.smekid.my.id"
+PassengerBaseURI "/"
+PassengerNodejs "/home/ykxyeguk/nodevenv/live.smekid.my.id/20/bin/node"
+PassengerAppType node
+PassengerStartupFile app.js
+PassengerAppLogFile "/home/ykxyeguk/live.smekid.my.id/passenger.log"
+# DO NOT REMOVE. CLOUDLINUX PASSENGER CONFIGURATION END
+
+# ==================================================================
 # CPANEL NODE.JS APP - LITESPEED + PASSENGER CONFIGURATION
 # ==================================================================
-# PENTING: File ini mengoptimalkan resource pada shared hosting
-# dengan LiteSpeed Web Server dan CloudLinux.
-
-# ---- LITESPEED: Batasi jumlah proses lsnode ----
 <IfModule Litespeed>
-  # Minta LiteSpeed untuk hanya men-spawn minimal worker untuk Node.js
   SetEnv LSAPI_CHILDREN 1
   SetEnv LSAPI_AVOID_FORK 1
   SetEnv LSAPI_MAX_IDLE 60
@@ -122,31 +126,21 @@ const htaccessContent = `# =====================================================
   SetEnv LSAPI_MAX_REQS 5000
 </IfModule>
 
-# ---- PHUSION PASSENGER: Resource Limits ----
-PassengerAppType node
-PassengerStartupFile app.js
-PassengerNodejs /home/ykxyeguk/nodevenv/live.smekid.my.id/20/bin/node
-
-# KUNCI UTAMA: Hanya 1 instance app yang berjalan
+# Resource Limits
 PassengerMaxInstances 1
 PassengerMinInstances 1
 PassengerPoolIdleTime 0
 PassengerMaxRequestQueueSize 100
 PassengerFriendlyErrorPages on
 
-# ---- Mencegah akses langsung ke file sensitif ----
-<FilesMatch "^\\.(env|htaccess|gitignore)">
+# Fallback Directory Index ke file Vite build
+DirectoryIndex public/index.html index.html index.php
+
+# Mencegah akses file sensitif
+<FilesMatch "^\\.(env|htaccess|gitignore|log)">
   Order allow,deny
   Deny from all
 </FilesMatch>
-
-# ---- Mencegah directory listing ----
-Options -Indexes
-
-# ---- Redirect HTTP ke HTTPS (optional, aktifkan jika pakai SSL) ----
-# RewriteEngine On
-# RewriteCond %{HTTPS} off
-# RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 `;
 
 fs.writeFileSync(path.resolve(outDir, ".htaccess"), htaccessContent);

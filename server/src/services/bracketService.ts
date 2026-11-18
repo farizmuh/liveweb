@@ -334,6 +334,64 @@ class BracketService {
     }
   }
 
+  // Seed Round 1 untuk Double Elimination (dengan penanganan BYE otomatis)
+  private async seedRound1(tournamentId: string, round1Matches: any[], teams: any[], bracketSize: number) {
+    const slots: (any | null)[] = [...teams];
+    while (slots.length < bracketSize) {
+      slots.push(null);
+    }
+
+    for (let i = 0; i < round1Matches.length; i++) {
+      const match = round1Matches[i];
+      const teamA = slots[i * 2] || null;
+      const teamB = slots[i * 2 + 1] || null;
+
+      const isBye = !teamA || !teamB;
+      let status: any = "PENDING";
+      let winnerTeam: string | null = null;
+      let winnerTeamId: string | null = null;
+
+      if (teamA && teamB) {
+        status = "READY";
+      } else if (teamA && !teamB) {
+        status = "COMPLETED";
+        winnerTeam = "A";
+        winnerTeamId = teamA.id;
+      } else if (!teamA && teamB) {
+        status = "COMPLETED";
+        winnerTeam = "B";
+        winnerTeamId = teamB.id;
+      }
+
+      await prisma.bracketMatch.update({
+        where: { id: match.id },
+        data: {
+          teamAId: teamA?.id || null,
+          teamAName: teamA?.name || (teamA ? "TEAM A" : "BYE"),
+          teamAShort: teamA?.shortName || (teamA ? "A" : "BYE"),
+          teamALogo: teamA?.logoUrl || null,
+          scoreA: 0,
+          teamBId: teamB?.id || null,
+          teamBName: teamB?.name || (teamB ? "TEAM B" : "BYE"),
+          teamBShort: teamB?.shortName || (teamB ? "B" : "BYE"),
+          teamBLogo: teamB?.logoUrl || null,
+          scoreB: 0,
+          assignedCourt: null,
+          courtMatchKey: null,
+          isBye,
+          status,
+          winnerTeam,
+          winnerTeamId,
+        },
+      });
+
+      if (winnerTeamId && match.nextMatchId) {
+        const winningTeam = winnerTeam === "A" ? teamA : teamB;
+        await this.advanceTeamToNextNode(match.nextMatchId, match.nextMatchSlot, winningTeam);
+      }
+    }
+  }
+
   // Generate Double Elimination
   private async generateDoubleElimination(tournamentId: string, teams: any[]) {
     const bracketSize = this.getBracketSize(teams.length);
