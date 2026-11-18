@@ -8,7 +8,7 @@ declare global {
 let dbUrl = process.env.DATABASE_URL;
 if (dbUrl && !dbUrl.includes("connection_limit")) {
   const separator = dbUrl.includes("?") ? "&" : "?";
-  dbUrl = `${dbUrl}${separator}connection_limit=5&pool_timeout=10`;
+  dbUrl = `${dbUrl}${separator}connection_limit=3`;
 }
 
 export const prisma =

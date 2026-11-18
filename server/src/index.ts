@@ -31,6 +31,8 @@ import * as bracketController from "./controllers/bracketController.js";
 const app = express();
 const server = http.createServer(app);
 
+// Passenger pada cPanel menyediakan port via env PASSENGER_BASE_URI atau via 'passenger' module
+// Juga bisa binding ke socket file jika disediakan oleh lsnode/Passenger
 const PORT = process.env.PORT || 3000;
 const CORS_ORIGIN = process.env.CORS_ORIGIN || "*";
 
@@ -128,17 +130,40 @@ app.get("*", (_req, res, next) => {
 
 // Initialize State and Listen
 async function startServer() {
-  await matchState.initializeFromDB();
-  await bracketService.syncAllCourtsWithBracket();
+  try {
+    await matchState.initializeFromDB();
+  } catch (err) {
+    console.error("[MatchState] Init error (non-fatal, server tetap berjalan):", err);
+  }
 
-  server.listen(PORT, () => {
+  try {
+    await bracketService.syncAllCourtsWithBracket();
+  } catch (err) {
+    console.error("[BracketService] Sync error (non-fatal, server tetap berjalan):", err);
+  }
+
+  // Phusion Passenger di cPanel binding ke port yang diberikan via env
+  // atau ke socket file. Kita gunakan PORT yang sudah diset.
+  const listenTarget = process.env.PASSENGER_LISTEN_SOCKET || PORT;
+  
+  server.listen(listenTarget as any, () => {
     console.log(`=======================================================`);
-    console.log(`🎮 ESPORTS OVERLAY SERVER RUNNING ON PORT ${PORT}`);
+    console.log(`🎮 ESPORTS OVERLAY SERVER RUNNING`);
+    console.log(`📡 Listening on: ${listenTarget}`);
     console.log(`📡 Socket.io ready for OBS & Admin real-time sync`);
     console.log(`📁 Uploads served at /uploads`);
     console.log(`=======================================================`);
   });
 }
+
+// Tangkal crash loop agar Passenger tidak men-spawn puluhan proses liar
+process.on("uncaughtException", (err) => {
+  console.error("[Server Anti-Crash] Uncaught Exception:", err);
+});
+
+process.on("unhandledRejection", (reason) => {
+  console.error("[Server Anti-Crash] Unhandled Rejection:", reason);
+});
 
 // Graceful shutdown saat Passenger mematikan proses karena idle / timeout
 async function handleShutdown(signal: string) {

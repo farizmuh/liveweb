@@ -54,11 +54,27 @@ fs.cpSync(path.resolve(rootDir, "server/prisma"), path.resolve(outDir, "prisma")
 // Buat folder uploads kosong
 fs.mkdirSync(path.resolve(outDir, "uploads"), { recursive: true });
 
-// Buat app.js (standar entry point untuk cPanel / CloudLinux Passenger)
-fs.writeFileSync(
-  path.resolve(outDir, "app.js"),
-  `// Entry point for cPanel Node.js Application\nimport('./dist/index.js');\n`
-);
+// Buat app.js (Entry point kompatibel cPanel Passenger + LiteSpeed)
+// PENTING: Passenger di cPanel MEMERLUKAN export "app" untuk mode autodetect
+const appJsContent = `// Entry point for cPanel Node.js (Phusion Passenger)
+// Passenger menggunakan file ini sebagai startup file.
+
+// Pastikan environment variables tersedia
+import { createRequire } from 'module';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load .env sebelum import apapun
+dotenv.config({ path: path.resolve(__dirname, '.env') });
+
+// Import dan jalankan server
+import('./dist/index.js');
+`;
+fs.writeFileSync(path.resolve(outDir, "app.js"), appJsContent);
 
 // Buat production package.json (Hanya dependensi produksi, TANPA devDependencies!)
 const prodPkg = {
@@ -85,28 +101,52 @@ fs.writeFileSync(path.resolve(outDir, "package.json"), JSON.stringify(prodPkg, n
 // Buat template .env produksi
 fs.writeFileSync(
   path.resolve(outDir, ".env"),
-  `PORT=3000\nNODE_ENV=production\nDATABASE_URL="mysql://USER_DB:PASSWORD_DB@localhost:3306/NAMA_DB?connection_limit=5&pool_timeout=10"\nJWT_SECRET="kunci-rahasia-esports-${Date.now()}"\nCORS_ORIGIN="*"\n`
+  `PORT=3000\nNODE_ENV=production\nDATABASE_URL="mysql://USER_DB:PASSWORD_DB@localhost:3306/NAMA_DB?connection_limit=3"\nJWT_SECRET="kunci-rahasia-esports-${Date.now()}"\nCORS_ORIGIN="*"\n`
 );
 
-// Buat file .htaccess untuk membatasi proses di cPanel CloudLinux Passenger
-const htaccessContent = `# ========================================================
-# CLOUDLINUX PASSENGER - RESOURCE OPTIMIZATION (20-30 NPROC LIMIT)
-# ========================================================
+// Buat file .htaccess yang efektif untuk LiteSpeed + Passenger di cPanel
+const htaccessContent = `# ==================================================================
+# CPANEL NODE.JS APP - LITESPEED + PASSENGER CONFIGURATION
+# ==================================================================
+# PENTING: File ini mengoptimalkan resource pada shared hosting
+# dengan LiteSpeed Web Server dan CloudLinux.
 
-# Batasi maksimal 1 Node process worker (asynchronous, cukup untuk puluhan request)
-PassengerMaxInstances 1
+# ---- LITESPEED: Batasi jumlah proses lsnode ----
+<IfModule Litespeed>
+  # Minta LiteSpeed untuk hanya men-spawn minimal worker untuk Node.js
+  SetEnv LSAPI_CHILDREN 1
+  SetEnv LSAPI_AVOID_FORK 1
+  SetEnv LSAPI_MAX_IDLE 60
+  SetEnv LSAPI_PGRP_MAX_IDLE 120
+  SetEnv LSAPI_MAX_PROCESS_TIME 3600
+  SetEnv LSAPI_MAX_REQS 5000
+</IfModule>
 
-# Izinkan proses mati (scale-down ke 0 proses) saat tidak ada pengunjung
-PassengerMinInstances 0
-
-# Matikan proses Node jika menganggur (idle) selama 300 detik (5 menit)
-PassengerPoolIdleTime 300
-
-# Batasi antrean request maksimal 30
-PassengerMaxRequestQueueSize 30
-
+# ---- PHUSION PASSENGER: Resource Limits ----
 PassengerAppType node
 PassengerStartupFile app.js
+PassengerNodejs /home/ykxyeguk/nodevenv/live.smekid.my.id/20/bin/node
+
+# KUNCI UTAMA: Hanya 1 instance app yang berjalan
+PassengerMaxInstances 1
+PassengerMinInstances 1
+PassengerPoolIdleTime 0
+PassengerMaxRequestQueueSize 100
+PassengerFriendlyErrorPages on
+
+# ---- Mencegah akses langsung ke file sensitif ----
+<FilesMatch "^\\.(env|htaccess|gitignore)">
+  Order allow,deny
+  Deny from all
+</FilesMatch>
+
+# ---- Mencegah directory listing ----
+Options -Indexes
+
+# ---- Redirect HTTP ke HTTPS (optional, aktifkan jika pakai SSL) ----
+# RewriteEngine On
+# RewriteCond %{HTTPS} off
+# RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 `;
 
 fs.writeFileSync(path.resolve(outDir, ".htaccess"), htaccessContent);

@@ -58,8 +58,9 @@ export const useMatchStore = defineStore("match", () => {
     if (!socket.value) {
       socket.value = io({
         transports: ["websocket", "polling"],
-        reconnectionAttempts: 20,
-        reconnectionDelay: 1000,
+        reconnectionAttempts: 10,
+        reconnectionDelay: 5000,
+        reconnectionDelayMax: 15000,
       });
 
       socket.value.on("connect", () => {

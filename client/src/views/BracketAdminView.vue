@@ -27,14 +27,24 @@
 
         <!-- Action Buttons -->
         <div class="flex items-center gap-2">
-          <!-- Copy OBS Link -->
+          <!-- Copy OBS Link Round 1 (3 Kolom) -->
+          <button
+            @click="copyRound1OverlayUrl"
+            class="py-1.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 text-xs font-bold flex items-center gap-1.5 active:scale-95 transition"
+            title="Salin Link OBS Khusus Babak 1 (Grid 3 Kolom - 57 Tim)"
+          >
+            <Swords class="w-3.5 h-3.5" />
+            <span class="hidden sm:inline">Link OBS Babak 1 (3 Kolom)</span>
+          </button>
+
+          <!-- Copy OBS Link Tree -->
           <button
             @click="copyBracketOverlayUrl"
-            class="py-1.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 text-xs font-bold flex items-center gap-1.5 active:scale-95 transition"
-            title="Salin Link OBS Bagan"
+            class="py-1.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs font-bold flex items-center gap-1.5 active:scale-95 transition"
+            title="Salin Link OBS Bagan Pohon Lengkap"
           >
-            <Copy class="w-3.5 h-3.5" />
-            <span class="hidden sm:inline">Link OBS Bagan</span>
+            <GitBranch class="w-3.5 h-3.5 text-amber-400" />
+            <span class="hidden sm:inline">Link OBS Pohon</span>
           </button>
 
           <!-- New Bracket Button -->
@@ -427,6 +437,7 @@ import {
   Radio,
   X,
   Square,
+  Swords,
 } from "lucide-vue-next";
 
 // Web Audio API Synthesizer for Esports Roulette SFX (Zero-dependency & 0ms latency)
@@ -629,11 +640,17 @@ function getNodeTeam(m: BracketMatchNode, slot: "A" | "B") {
 function startRoulette() {
   if (!tournament.value || tournament.value.status !== "DRAFT") return;
 
-  const round1Matches = tournament.value.matches.filter((m) => m.round === 1);
-  const allTeams: any[] = [];
+  // Kumpulkan semua match awal yang memiliki tim (Round 1 dan Round 2)
+  const initialMatches = tournament.value.matches.filter(
+    (m) => m.round === 1 || (m.round === 2 && (m.teamAId || m.teamBId))
+  );
 
-  for (const m of round1Matches) {
-    if (m.teamAId || (m.teamAName && m.teamAName !== "BYE")) {
+  const allTeams: any[] = [];
+  const teamIdSet = new Set<string>();
+
+  for (const m of tournament.value.matches) {
+    if (m.teamAId && !teamIdSet.has(m.teamAId)) {
+      teamIdSet.add(m.teamAId);
       allTeams.push({
         id: m.teamAId,
         name: m.teamAName,
@@ -641,7 +658,8 @@ function startRoulette() {
         logoUrl: m.teamALogo,
       });
     }
-    if (m.teamBId || (m.teamBName && m.teamBName !== "BYE")) {
+    if (m.teamBId && !teamIdSet.has(m.teamBId)) {
+      teamIdSet.add(m.teamBId);
       allTeams.push({
         id: m.teamBId,
         name: m.teamBName,
@@ -659,11 +677,12 @@ function startRoulette() {
   const cycleShuffle = () => {
     const shuffled = [...allTeams].sort(() => Math.random() - 0.5);
     const newSlots: Record<string, { teamA: any; teamB: any }> = {};
+    let cursor = 0;
 
-    round1Matches.forEach((m, idx) => {
+    initialMatches.forEach((m) => {
       newSlots[m.id] = {
-        teamA: shuffled[idx * 2] || null,
-        teamB: shuffled[idx * 2 + 1] || null,
+        teamA: m.teamAId ? (shuffled[cursor++] || null) : null,
+        teamB: m.teamBId ? (shuffled[cursor++] || null) : null,
       };
     });
 
@@ -680,13 +699,20 @@ async function stopRoulette() {
   isStopping.value = true;
   clearInterval(rollTimer);
 
-  const round1Matches = tournament.value?.matches.filter((m) => m.round === 1) || [];
+  const initialMatches = tournament.value?.matches.filter(
+    (m) => m.round === 1 || (m.round === 2 && (m.teamAId || m.teamBId))
+  ) || [];
+
   const allTeams: any[] = [];
-  for (const m of round1Matches) {
-    if (m.teamAId || (m.teamAName && m.teamAName !== "BYE")) {
+  const teamIdSet = new Set<string>();
+
+  for (const m of tournament.value?.matches || []) {
+    if (m.teamAId && !teamIdSet.has(m.teamAId)) {
+      teamIdSet.add(m.teamAId);
       allTeams.push({ id: m.teamAId, name: m.teamAName, shortName: m.teamAShort, logoUrl: m.teamALogo });
     }
-    if (m.teamBId || (m.teamBName && m.teamBName !== "BYE")) {
+    if (m.teamBId && !teamIdSet.has(m.teamBId)) {
+      teamIdSet.add(m.teamBId);
       allTeams.push({ id: m.teamBId, name: m.teamBName, shortName: m.teamBShort, logoUrl: m.teamBLogo });
     }
   }
@@ -697,12 +723,15 @@ async function stopRoulette() {
     await new Promise((resolve) => setTimeout(resolve, decelSteps[i]));
     const shuffled = [...allTeams].sort(() => Math.random() - 0.5);
     const newSlots: Record<string, { teamA: any; teamB: any }> = {};
-    round1Matches.forEach((m, idx) => {
+    let cursor = 0;
+
+    initialMatches.forEach((m) => {
       newSlots[m.id] = {
-        teamA: shuffled[idx * 2] || null,
-        teamB: shuffled[idx * 2 + 1] || null,
+        teamA: m.teamAId ? (shuffled[cursor++] || null) : null,
+        teamB: m.teamBId ? (shuffled[cursor++] || null) : null,
       };
     });
+
     rollingSlots.value = newSlots;
     audioFX.playTick(600 - i * 65);
   }
@@ -768,9 +797,16 @@ async function handleFinishMatch(courtMatchKey: string) {
 }
 
 function copyBracketOverlayUrl() {
-  const url = `${window.location.origin}/overlay/bracket`;
+  const url = `${window.location.origin}/overlay/bracket?view=tree`;
   navigator.clipboard.writeText(url);
-  toastMessage.value = "Link OBS Bagan Turnamen berhasil disalin!";
+  toastMessage.value = "Link OBS Bagan Pohon berhasil disalin!";
+  setTimeout(() => (toastMessage.value = ""), 2500);
+}
+
+function copyRound1OverlayUrl() {
+  const url = `${window.location.origin}/overlay/bracket?view=round1`;
+  navigator.clipboard.writeText(url);
+  toastMessage.value = "Link OBS Babak 1 (3 Kolom) berhasil disalin!";
   setTimeout(() => (toastMessage.value = ""), 2500);
 }
 </script>

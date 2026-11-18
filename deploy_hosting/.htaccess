@@ -1,18 +1,42 @@
-# ========================================================
-# CLOUDLINUX PASSENGER - RESOURCE OPTIMIZATION (20-30 NPROC LIMIT)
-# ========================================================
+# ==================================================================
+# CPANEL NODE.JS APP - LITESPEED + PASSENGER CONFIGURATION
+# ==================================================================
+# PENTING: File ini mengoptimalkan resource pada shared hosting
+# dengan LiteSpeed Web Server dan CloudLinux.
 
-# Batasi maksimal 1 Node process worker (asynchronous, cukup untuk puluhan request)
-PassengerMaxInstances 1
+# ---- LITESPEED: Batasi jumlah proses lsnode ----
+<IfModule Litespeed>
+  # Minta LiteSpeed untuk hanya men-spawn minimal worker untuk Node.js
+  SetEnv LSAPI_CHILDREN 1
+  SetEnv LSAPI_AVOID_FORK 1
+  SetEnv LSAPI_MAX_IDLE 60
+  SetEnv LSAPI_PGRP_MAX_IDLE 120
+  SetEnv LSAPI_MAX_PROCESS_TIME 3600
+  SetEnv LSAPI_MAX_REQS 5000
+</IfModule>
 
-# Izinkan proses mati (scale-down ke 0 proses) saat tidak ada pengunjung
-PassengerMinInstances 0
-
-# Matikan proses Node jika menganggur (idle) selama 300 detik (5 menit)
-PassengerPoolIdleTime 300
-
-# Batasi antrean request maksimal 30
-PassengerMaxRequestQueueSize 30
-
+# ---- PHUSION PASSENGER: Resource Limits ----
 PassengerAppType node
 PassengerStartupFile app.js
+PassengerNodejs /home/ykxyeguk/nodevenv/live.smekid.my.id/20/bin/node
+
+# KUNCI UTAMA: Hanya 1 instance app yang berjalan
+PassengerMaxInstances 1
+PassengerMinInstances 1
+PassengerPoolIdleTime 0
+PassengerMaxRequestQueueSize 100
+PassengerFriendlyErrorPages on
+
+# ---- Mencegah akses langsung ke file sensitif ----
+<FilesMatch "^\.(env|htaccess|gitignore)">
+  Order allow,deny
+  Deny from all
+</FilesMatch>
+
+# ---- Mencegah directory listing ----
+Options -Indexes
+
+# ---- Redirect HTTP ke HTTPS (optional, aktifkan jika pakai SSL) ----
+# RewriteEngine On
+# RewriteCond %{HTTPS} off
+# RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
