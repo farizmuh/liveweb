@@ -35,7 +35,8 @@ Sistem penyiaran (*broadcast*), papan skor (*scoreboard*), dan manajemen bagan t
   - Cukup gunakan 1 link terpusat `http://localhost:3000/overlay/bracket` di OBS Browser Source.
   - **Tahap 1 (Saat Babak 1 Aktif):** Otomatis menampilkan **Grid 3 Kolom (25 match + box tim unggulan)**. Semua 57 tim muat pas dalam 1 layar 1080p tanpa scrollbar (seperti SS 2).
   - **Tahap 2 (Saat Masuk Babak 32 Besar & 16 Besar):** Otomatis menampilkan **Grid 2 Kolom Luas** untuk ronde yang sedang aktif sehingga kartu match proporsional, nama sekolah/logo terbaca jelas, dan tidak ada scrollbar.
-  - **Tahap 3 (Saat Masuk Quarterfinals / 8 Besar):** Otomatis bertransisi mulus ke **Bagan Pohon Playoffs (Quarterfinals $\to$ Semifinals $\to$ Grand Finals)** seperti SS 3 hingga penobatan juara.
+  - **Tahap 3 (Saat Masuk Quarterfinals / 8 Besar):** Otomatis bertransisi mulus ke **Bagan Pohon Playoffs (Quarterfinals $\to$ Semifinals $\to$ Grand Finals & Perebutan Juara 3)** seperti SS 3 hingga penobatan juara.
+  - **Pertandingan Perebutan Juara 3 (Bronze Match):** Tim yang gugur di Semifinal 1 dan Semifinal 2 otomatis melaju ke perebutan Juara 3 berdampingan dengan Grand Finals (beraksen Perunggu/Bronze) dan dapat disiarkan serta ditugaskan ke meja secara mandiri.
   - Tampilan overlay 100% bersih untuk siaran resmi tanpa tombol kontrol klik yang mengganggu di layar OBS.
 - **Fitur Kontrol Bagan:** Acak susunan tim (*Random Shuffle*), finalisasi bagan (*Finalize*), kirim pertandingan ke meja wasit (*Assign to Court*), dan sinkronisasi skor live.
 

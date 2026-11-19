@@ -459,7 +459,7 @@
               🏆 FASE PLAYOFFS (8 BESAR MENUJU JUARA)
             </span>
             <span class="text-slate-300 font-bold">
-              Pertarungan Puncak Juara &bull; Quarterfinals &bull; Semifinals &bull; Grand Finals
+              Pertarungan Puncak Juara &bull; Quarterfinals &bull; Semifinals &bull; Grand Finals & Juara 3
             </span>
           </div>
           <div class="flex items-center gap-2 text-amber-400 font-bold text-xs">
@@ -478,7 +478,7 @@
             <!-- Header Babak -->
             <div class="text-center pb-2 shrink-0">
               <span class="px-4 py-1.5 rounded-xl bg-slate-900 border border-amber-500/60 text-amber-300 font-black text-sm uppercase tracking-widest shadow-gold-glow inline-block">
-                {{ roundObj.name }}
+                {{ roundObj.matches.length > 1 && roundObj.round === maxRoundNumber ? '🏆 FINALS & PEREBUTAN JUARA 3' : roundObj.name }}
               </span>
             </div>
 
@@ -489,9 +489,31 @@
                 :key="m.id"
                 class="rounded-2xl metallic-card border transition-all duration-300 shadow-2xl overflow-hidden relative"
                 :class="[
-                  m.status === 'LIVE' ? 'border-2 border-amber-400 shadow-gold-glow scale-[1.02]' : 'border-slate-700/80'
+                  m.status === 'LIVE' ? 'border-2 border-amber-400 shadow-gold-glow scale-[1.02]' : (
+                    m.roundName.toLowerCase().includes('juara 3') || m.roundName.toLowerCase().includes('bronze')
+                      ? 'border-orange-500/70 bg-gradient-to-b from-orange-950/20 via-slate-950/80 to-slate-950 shadow-lg'
+                      : (m.roundName.toLowerCase().includes('grand final')
+                          ? 'border-amber-400/80 bg-gradient-to-b from-amber-950/30 via-slate-950/80 to-slate-950 shadow-gold-glow/40'
+                          : 'border-slate-700/80')
+                  )
                 ]"
               >
+                <!-- Badge Identitas Pertandingan (Grand Finals vs Perebutan Juara 3) -->
+                <div
+                  v-if="m.roundName.toLowerCase().includes('grand final')"
+                  class="w-full bg-gradient-to-r from-amber-600 via-amber-400 to-amber-600 text-black text-[11px] font-black uppercase tracking-widest text-center py-1 flex items-center justify-center gap-1.5 shadow"
+                >
+                  <Crown class="w-3.5 h-3.5" />
+                  <span>GRAND FINALS (JUARA 1 & 2)</span>
+                </div>
+                <div
+                  v-else-if="m.roundName.toLowerCase().includes('juara 3') || m.roundName.toLowerCase().includes('bronze')"
+                  class="w-full bg-gradient-to-r from-orange-700 via-amber-600 to-orange-700 text-white text-[11px] font-black uppercase tracking-widest text-center py-1 flex items-center justify-center gap-1.5 shadow"
+                >
+                  <Trophy class="w-3.5 h-3.5 text-amber-200" />
+                  <span>PEREBUTAN JUARA 3</span>
+                </div>
+
                 <!-- Live Banner -->
                 <div
                   v-if="m.status === 'LIVE'"
@@ -887,6 +909,11 @@ const allTournamentTeams = computed(() => {
 const playoffsRounds = computed(() => {
   if (rounds.value.length <= 3) return rounds.value;
   return rounds.value.slice(-3);
+});
+
+const maxRoundNumber = computed(() => {
+  if (!tournament.value?.matches || tournament.value.matches.length === 0) return 0;
+  return Math.max(...tournament.value.matches.map((m) => m.round));
 });
 
 // ==============================================================

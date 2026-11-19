@@ -149,7 +149,7 @@ class BracketService {
     // Matriks penyimpan node per ronde
     const roundsMatches: any[][] = [];
 
-    // 1. Buat Grand Finals (Ronde Terakhir)
+    // 1. Buat Grand Finals (Match #1) & Perebutan Juara 3 (Match #2) di Ronde Puncak
     const finals = await prisma.bracketMatch.create({
       data: {
         tournamentId,
@@ -160,7 +160,19 @@ class BracketService {
         status: "PENDING",
       },
     });
-    roundsMatches[totalRounds] = [finals];
+
+    const bronze = await prisma.bracketMatch.create({
+      data: {
+        tournamentId,
+        round: totalRounds,
+        roundName: "Perebutan Juara 3",
+        section: "UPPER",
+        matchOrder: 2,
+        status: "PENDING",
+      },
+    });
+
+    roundsMatches[totalRounds] = [finals, bronze];
 
     // 2. Buat babak-babak utama dari Semifinals mundur ke babak utama pertama
     const firstMainRound = hasPlayIn ? 2 : 1;
@@ -188,6 +200,21 @@ class BracketService {
         });
         roundsMatches[r].push(match);
       }
+    }
+
+    // Hubungkan pecundang Semifinal 1 dan Semifinal 2 ke Perebutan Juara 3
+    if (roundsMatches[totalRounds - 1]?.length === 2) {
+      const semi1 = roundsMatches[totalRounds - 1][0];
+      const semi2 = roundsMatches[totalRounds - 1][1];
+
+      await prisma.bracketMatch.update({
+        where: { id: semi1.id },
+        data: { loserMatchId: bronze.id, loserMatchSlot: "A" },
+      });
+      await prisma.bracketMatch.update({
+        where: { id: semi2.id },
+        data: { loserMatchId: bronze.id, loserMatchSlot: "B" },
+      });
     }
 
     // 3. Jika ada Play-in (hasPlayIn === true), buat Ronde 1 (Round 1)
@@ -927,6 +954,117 @@ class BracketService {
     }
   }
 
+  // Memastikan Perebutan Juara 3 (Bronze Match) selalu ada di babak final Single Elimination
+  public async ensureBronzeMatch(tournamentId: string) {
+    try {
+      const tournament = await prisma.tournament.findUnique({
+        where: { id: tournamentId },
+        include: {
+          matches: {
+            include: { teamA: true, teamB: true },
+            orderBy: [{ round: "asc" }, { matchOrder: "asc" }],
+          },
+        },
+      });
+
+      if (!tournament || tournament.matches.length === 0) return;
+      if (tournament.type === "DOUBLE_ELIMINATION") return;
+
+      const maxRound = Math.max(...tournament.matches.map((m) => m.round));
+      // Cari apakah sudah ada Bronze Match / Perebutan Juara 3
+      let bronze = tournament.matches.find(
+        (m) =>
+          m.round === maxRound &&
+          (m.matchOrder === 2 ||
+            m.roundName.toLowerCase().includes("juara 3") ||
+            m.roundName.toLowerCase().includes("bronze"))
+      );
+
+      const semiRound = maxRound - 1;
+      const semiMatches = tournament.matches
+        .filter((m) => m.round === semiRound)
+        .sort((a, b) => a.matchOrder - b.matchOrder);
+
+      if (semiMatches.length < 2) return; // Belum mencapai struktur semifinal
+
+      const semi1 = semiMatches[0];
+      const semi2 = semiMatches[1];
+
+      if (!bronze) {
+        bronze = await prisma.bracketMatch.create({
+          data: {
+            tournamentId,
+            round: maxRound,
+            roundName: "Perebutan Juara 3",
+            section: "UPPER",
+            matchOrder: 2,
+            status: "PENDING",
+          },
+          include: { teamA: true, teamB: true },
+        });
+      }
+
+      // Pastikan Semifinal 1 & 2 terhubung ke loserMatchId
+      if (semi1.loserMatchId !== bronze.id || semi1.loserMatchSlot !== "A") {
+        await prisma.bracketMatch.update({
+          where: { id: semi1.id },
+          data: { loserMatchId: bronze.id, loserMatchSlot: "A" },
+        });
+      }
+
+      if (semi2.loserMatchId !== bronze.id || semi2.loserMatchSlot !== "B") {
+        await prisma.bracketMatch.update({
+          where: { id: semi2.id },
+          data: { loserMatchId: bronze.id, loserMatchSlot: "B" },
+        });
+      }
+
+      // Sinkronkan tim yang gugur di Semifinal ke Bronze Match jika Semifinal sudah COMPLETED
+      let updateBronze = false;
+      const bronzeUpdateData: any = {};
+
+      if (semi1.status === "COMPLETED" && semi1.winnerTeam) {
+        const loser1Obj = semi1.winnerTeam === "A" ? semi1.teamB : semi1.teamA;
+        if (loser1Obj && bronze.teamAId !== loser1Obj.id) {
+          bronzeUpdateData.teamAId = loser1Obj.id;
+          bronzeUpdateData.teamAName = loser1Obj.name;
+          bronzeUpdateData.teamAShort = loser1Obj.shortName;
+          bronzeUpdateData.teamALogo = loser1Obj.logoUrl;
+          bronzeUpdateData.teamAInstitution = loser1Obj.institution || null;
+          updateBronze = true;
+        }
+      }
+
+      if (semi2.status === "COMPLETED" && semi2.winnerTeam) {
+        const loser2Obj = semi2.winnerTeam === "A" ? semi2.teamB : semi2.teamA;
+        if (loser2Obj && bronze.teamBId !== loser2Obj.id) {
+          bronzeUpdateData.teamBId = loser2Obj.id;
+          bronzeUpdateData.teamBName = loser2Obj.name;
+          bronzeUpdateData.teamBShort = loser2Obj.shortName;
+          bronzeUpdateData.teamBLogo = loser2Obj.logoUrl;
+          bronzeUpdateData.teamBInstitution = loser2Obj.institution || null;
+          updateBronze = true;
+        }
+      }
+
+      const finalTeamA = bronzeUpdateData.teamAId || bronze.teamAId;
+      const finalTeamB = bronzeUpdateData.teamBId || bronze.teamBId;
+      if (finalTeamA && finalTeamB && bronze.status === "PENDING") {
+        bronzeUpdateData.status = "READY";
+        updateBronze = true;
+      }
+
+      if (updateBronze) {
+        await prisma.bracketMatch.update({
+          where: { id: bronze.id },
+          data: bronzeUpdateData,
+        });
+      }
+    } catch (err) {
+      console.error("[BracketService] Error ensuring bronze match:", err);
+    }
+  }
+
   // 6. Get Complete Tournament Bracket
   public async getTournamentBracket(tournamentId?: string) {
     let tournament;
@@ -954,7 +1092,19 @@ class BracketService {
     }
 
     if (tournament) {
+      await this.ensureBronzeMatch(tournament.id);
       await this.syncAllCourtsWithBracket(tournament.id);
+
+      // Ambil kembali tournament dengan data matches terbaru setelah ensureBronzeMatch
+      tournament = await prisma.tournament.findUnique({
+        where: { id: tournament.id },
+        include: {
+          matches: {
+            include: { teamA: true, teamB: true },
+            orderBy: [{ round: "asc" }, { matchOrder: "asc" }],
+          },
+        },
+      });
     }
 
     return tournament;

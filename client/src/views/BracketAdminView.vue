@@ -157,7 +157,7 @@
             <!-- Round Title Header -->
             <div class="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-center shadow">
               <h3 class="text-xs font-black uppercase text-amber-300 tracking-wider">
-                {{ roundObj.name }}
+                {{ roundObj.matches.length > 1 && roundObj.round === maxRound ? 'FINALS & JUARA 3' : roundObj.name }}
               </h3>
               <span class="text-[10px] text-slate-400 font-semibold">{{ roundObj.matches.length }} Pertandingan</span>
             </div>
@@ -178,9 +178,17 @@
               >
                 <!-- Match Status Banner -->
                 <div class="flex items-center justify-between text-[11px] pb-1 border-b border-slate-800">
-                  <span class="font-bold text-slate-400 uppercase">Match #{{ m.matchOrder }}</span>
+                  <div class="flex items-center gap-1.5 min-w-0">
+                    <span v-if="m.roundName.toLowerCase().includes('juara 3') || m.roundName.toLowerCase().includes('bronze')" class="px-1.5 py-0.5 rounded bg-orange-600/30 text-orange-400 border border-orange-500/50 font-black text-[9px] uppercase tracking-wider shrink-0">
+                      🥉 Juara 3
+                    </span>
+                    <span v-else-if="m.roundName.toLowerCase().includes('grand final')" class="px-1.5 py-0.5 rounded bg-amber-500/30 text-amber-300 border border-amber-400/50 font-black text-[9px] uppercase tracking-wider shrink-0">
+                      👑 Grand Final
+                    </span>
+                    <span class="font-bold text-slate-400 uppercase truncate">Match #{{ m.matchOrder }}</span>
+                  </div>
                   <span
-                    class="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider"
+                    class="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider shrink-0"
                     :class="nodeStatusBadgeClass(m.status)"
                   >
                     {{ isRolling && (roundObj.round === 1 || m.teamAId || m.teamBId) ? 'ROLLING...' : m.status }}
@@ -486,6 +494,11 @@ const rounds = computed(() => {
   }
 
   return Array.from(map.values()).sort((a, b) => a.round - b.round);
+});
+
+const maxRound = computed(() => {
+  if (!tournament.value?.matches || tournament.value.matches.length === 0) return 0;
+  return Math.max(...tournament.value.matches.map((m) => m.round));
 });
 
 onMounted(async () => {
