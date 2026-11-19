@@ -58,7 +58,7 @@ model User {
 
 model Team {
   id          String   @id @default(uuid())
-  name        String   @unique
+  name        String
   shortName   String
   logoUrl     String?
   colorHex    String?  @default("#2563eb")

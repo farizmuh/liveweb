@@ -8,6 +8,10 @@ Sistem penyiaran (*broadcast*), papan skor (*scoreboard*), dan manajemen bagan t
 
 ### 1. Database Tim Preset, Asal Sekolah & Bulk Import Google Form (`/teams`)
 - **Manajemen Tim Lengkap:** Tambah, edit, dan hapus tim beserta tag singkatan dan logo tim.
+- **Dukungan Nama Tim Sama dari Sekolah Berbeda:**
+  - Jika beberapa sekolah mendaftarkan tim dengan nama yang sama (misal: `GARUDA` dari *SMPN 1 KEDIRI* dan `GARUDA` dari *SMPN 2 MALANG*), sistem **tidak menolak/error**.
+  - **Auto-Differentiator:** Sistem otomatis menambahkan pembeda nama berupa `GARUDA (SMPN 1 KEDIRI)` dan `GARUDA (SMPN 2 MALANG)` agar caster, wasit, dan penonton tidak tertukar.
+  - Duplikasi hanya ditolak jika nama tim **DAN** asal sekolahnya sama persis.
 - **Asal Sekolah / Instansi (Opsional):** 
   - Cocok untuk turnamen antar-pelajar SMP, SMA, SMK, maupun instansi/kampus.
   - Tampil di kartu database tim, slot bagan turnamen, dan papan skor overlay.
@@ -16,7 +20,8 @@ Sistem penyiaran (*broadcast*), papan skor (*scoreboard*), dan manajemen bagan t
   - Copy-paste langsung baris/kolom pendaftaran dari Google Sheets hasil formulir pendaftaran Google Form.
   - **Deteksi 2 Kolom Otomatis:** Kolom 1 = Nama Tim, Kolom 2 = Asal Sekolah/Instansi.
   - **Auto-Generate Tag:** Singkatan tag (3–5 huruf kapital) otomatis dibuat dari inisial nama tim jika tidak disediakan.
-  - **Anti-Duplikat Cerdas:** Tim yang sudah terdaftar di database otomatis dilewati tanpa menimbulkan error.
+  - **Badge Deteksi Tabrakan:** Di tabel preview, tim yang namanya disesuaikan karena tabrakan nama antar sekolah ditandai dengan badge `⚠️ Nama Disesuaikan`.
+  - **Anti-Duplikat Cerdas:** Tim yang sudah terdaftar dengan sekolah yang sama persis otomatis dilewati tanpa menimbulkan error.
   - Mendukung upload file `.csv` atau `.txt` dan tabel live preview sebelum disimpan.
 - **Kolom Pencarian Instan (Search Bar):** Mempermudah pencarian tim berdasarkan nama atau tag singkatan.
 
@@ -122,13 +127,14 @@ Paket hosting menggunakan **Phusion Passenger / LiteSpeed** yang dioptimalkan ag
 1. **Buat File ZIP di Komputer:**
    Jalankan file [build-hosting.bat](file:///d:/ngoding/liveweb/build-hosting.bat) atau ketik `npm run build:hosting`. File `deploy_hosting.zip` akan otomatis terbuat.
 2. **Update Database di phpMyAdmin Hosting:**
-   Buka phpMyAdmin cPanel $\to$ pilih database turnamen $\to$ tab **SQL**, lalu jalankan:
+   Buka phpMyAdmin cPanel $\to$ pilih database turnamen $\to$ tab **SQL**, lalu jalankan query dari file [update_schema.sql](file:///d:/ngoding/liveweb/update_schema.sql):
    ```sql
    ALTER TABLE `Team` ADD COLUMN IF NOT EXISTS `institution` VARCHAR(191) NULL;
    ALTER TABLE `Match` ADD COLUMN IF NOT EXISTS `teamAInstitution` VARCHAR(191) NULL;
    ALTER TABLE `Match` ADD COLUMN IF NOT EXISTS `teamBInstitution` VARCHAR(191) NULL;
    ALTER TABLE `BracketMatch` ADD COLUMN IF NOT EXISTS `teamAInstitution` VARCHAR(191) NULL;
    ALTER TABLE `BracketMatch` ADD COLUMN IF NOT EXISTS `teamBInstitution` VARCHAR(191) NULL;
+   ALTER TABLE `Team` DROP INDEX `Team_name_key`;
    ```
 3. **Upload & Ekstrak di File Manager:**
    Upload file `deploy_hosting.zip` ke folder domain (contoh: `/home/ykxyeguk/live.smekid.my.id`) $\to$ klik kanan $\to$ **Extract**.

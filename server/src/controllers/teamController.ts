@@ -22,6 +22,41 @@ export async function createTeam(req: Request, res: Response) {
       return res.status(400).json({ error: "Nama tim dan singkatan (tag) wajib diisi." });
     }
 
+    const nameTrimmed = name.trim();
+    const instTrimmed = institution ? String(institution).trim() : null;
+
+    // 1. Cek apakah tim dengan nama DAN sekolah yang sama persis sudah ada
+    const existingExact = await prisma.team.findFirst({
+      where: {
+        name: nameTrimmed,
+        institution: instTrimmed,
+      },
+    });
+
+    if (existingExact) {
+      return res.status(400).json({
+        error: instTrimmed
+          ? `Tim "${nameTrimmed}" dari ${instTrimmed} sudah terdaftar di database.`
+          : `Tim "${nameTrimmed}" sudah terdaftar di database.`,
+      });
+    }
+
+    // 2. Jika nama tim sama sudah ada tetapi dari sekolah berbeda:
+    // Otomatis beri pembeda: "NAMA TIM (ASAL SEKOLAH)"
+    let finalName = nameTrimmed;
+    let finalShort = shortName.trim().toUpperCase();
+
+    if (instTrimmed && !nameTrimmed.includes(`(${instTrimmed})`)) {
+      const existingNameDiffInst = await prisma.team.findFirst({
+        where: {
+          name: nameTrimmed,
+        },
+      });
+      if (existingNameDiffInst) {
+        finalName = `${nameTrimmed} (${instTrimmed})`;
+      }
+    }
+
     let finalLogoUrl = inputLogoUrl || null;
     if (req.file) {
       finalLogoUrl = `/uploads/${req.file.filename}`;
@@ -29,19 +64,16 @@ export async function createTeam(req: Request, res: Response) {
 
     const team = await prisma.team.create({
       data: {
-        name: name.trim(),
-        shortName: shortName.trim().toUpperCase(),
+        name: finalName,
+        shortName: finalShort,
         colorHex: colorHex || "#2563eb",
-        institution: institution ? String(institution).trim() : null,
+        institution: instTrimmed,
         logoUrl: finalLogoUrl,
       },
     });
 
     return res.status(201).json({ team });
   } catch (error: any) {
-    if (error.code === "P2002") {
-      return res.status(400).json({ error: "Nama tim sudah terdaftar di database." });
-    }
     console.error("Error creating team:", error);
     return res.status(500).json({ error: "Gagal menambahkan tim." });
   }
@@ -76,11 +108,27 @@ export async function bulkCreateTeams(req: Request, res: Response) {
       return res.status(400).json({ error: "Data tim tidak valid atau kosong." });
     }
 
-    // Ambil semua nama tim yang sudah ada di database untuk deteksi duplikasi
+    // Ambil semua tim yang sudah ada di database (nama & instansi)
     const existingTeams = await prisma.team.findMany({
-      select: { name: true },
+      select: { name: true, institution: true },
     });
-    const existingNameSet = new Set(existingTeams.map((t) => t.name.trim().toUpperCase()));
+
+    // Set untuk deteksi duplikat exact (nama SAMA & instansi SAMA)
+    const exactExistingSet = new Set(
+      existingTeams.map((t) => `${t.name.trim().toUpperCase()}___${(t.institution || "").trim().toUpperCase()}`)
+    );
+
+    // Map untuk deteksi tabrakan nama tim antar instansi di database
+    const dbNameSet = new Set(existingTeams.map((t) => t.name.trim().toUpperCase()));
+
+    // Hitung frekuensi nama tim di batch input untuk tahu apakah ada nama yang sama beda instansi dalam 1 batch
+    const batchNameCounts = new Map<string, number>();
+    for (const item of inputTeams) {
+      if (!item || !item.name) continue;
+      const nUpper = String(item.name).trim().toUpperCase();
+      if (!nUpper) continue;
+      batchNameCounts.set(nUpper, (batchNameCounts.get(nUpper) || 0) + 1);
+    }
 
     const newTeamsData: Array<{
       name: string;
@@ -90,8 +138,9 @@ export async function bulkCreateTeams(req: Request, res: Response) {
       logoUrl: string | null;
     }> = [];
 
-    const processedNames = new Set<string>();
+    const processedExactKeys = new Set<string>();
     let skippedCount = 0;
+    let adjustedCount = 0;
 
     for (const item of inputTeams) {
       if (!item || !item.name) {
@@ -100,26 +149,41 @@ export async function bulkCreateTeams(req: Request, res: Response) {
       }
 
       const nameTrimmed = String(item.name).trim();
-      const nameUpper = nameTrimmed.toUpperCase();
+      const instTrimmed = item.institution ? String(item.institution).trim() : null;
+      const exactKey = `${nameTrimmed.toUpperCase()}___${(instTrimmed || "").toUpperCase()}`;
 
-      // Lewati jika kosong, atau sudah ada di database, atau duplikat di dalam batch input
-      if (!nameTrimmed || existingNameSet.has(nameUpper) || processedNames.has(nameUpper)) {
+      // Lewati jika kosong atau duplikat exact (sudah ada di DB atau sudah diproses di baris sebelumnya)
+      if (!nameTrimmed || exactExistingSet.has(exactKey) || processedExactKeys.has(exactKey)) {
         skippedCount++;
         continue;
       }
 
-      processedNames.add(nameUpper);
+      processedExactKeys.add(exactKey);
 
-      // Tentukan shortName: gunakan input jika ada, atau buat otomatis dari nama
+      // Cek apakah ada tabrakan nama tim (nama sama tapi beda sekolah)
+      // Tabrakan terjadi jika nama muncul > 1 kali di batch input ATAU nama sudah ada di database dari sekolah lain
+      const hasBatchCollision = (batchNameCounts.get(nameTrimmed.toUpperCase()) || 0) > 1;
+      const hasDbCollision = dbNameSet.has(nameTrimmed.toUpperCase());
+
+      let finalName = nameTrimmed;
+      if (instTrimmed && (hasBatchCollision || hasDbCollision)) {
+        const instSuffix = `(${instTrimmed})`;
+        if (!nameTrimmed.toLowerCase().endsWith(instSuffix.toLowerCase())) {
+          finalName = `${nameTrimmed} (${instTrimmed})`;
+          adjustedCount++;
+        }
+      }
+
+      // Tentukan shortName: gunakan input jika ada, atau buat otomatis dari nama dasar
       const shortName = item.shortName && String(item.shortName).trim()
         ? String(item.shortName).trim().toUpperCase().slice(0, 5)
         : generateShortName(nameTrimmed);
 
       newTeamsData.push({
-        name: nameTrimmed,
+        name: finalName,
         shortName: shortName || nameTrimmed.slice(0, 4).toUpperCase(),
         colorHex: item.colorHex || "#2563eb",
-        institution: item.institution ? String(item.institution).trim() : null,
+        institution: instTrimmed,
         logoUrl: item.logoUrl || null,
       });
     }
@@ -135,10 +199,12 @@ export async function bulkCreateTeams(req: Request, res: Response) {
       orderBy: { name: "asc" },
     });
 
+    const adjustMsg = adjustedCount > 0 ? ` (${adjustedCount} nama otomatis disesuaikan dengan asal instansi)` : "";
     return res.status(201).json({
       success: true,
-      message: `Berhasil menambahkan ${newTeamsData.length} tim baru. (${skippedCount} tim dilewati karena sudah ada/duplikat).`,
+      message: `Berhasil menambahkan ${newTeamsData.length} tim baru${adjustMsg}. (${skippedCount} tim dilewati karena duplikat persis).`,
       addedCount: newTeamsData.length,
+      adjustedCount,
       skippedCount,
       teams: allTeams,
     });
@@ -153,6 +219,36 @@ export async function updateTeam(req: Request, res: Response) {
     const { id } = req.params;
     const { name, shortName, colorHex, institution, logoUrl: inputLogoUrl } = req.body;
 
+    const nameTrimmed = name !== undefined ? String(name).trim() : undefined;
+    const instTrimmed = institution !== undefined ? (institution ? String(institution).trim() : null) : undefined;
+
+    // Cek duplikasi jika nama/instansi diubah
+    if (nameTrimmed !== undefined || instTrimmed !== undefined) {
+      const currentTeam = await prisma.team.findUnique({ where: { id } });
+      if (!currentTeam) {
+        return res.status(404).json({ error: "Tim tidak ditemukan." });
+      }
+
+      const checkName = nameTrimmed !== undefined ? nameTrimmed : currentTeam.name;
+      const checkInst = instTrimmed !== undefined ? instTrimmed : currentTeam.institution;
+
+      const existingExact = await prisma.team.findFirst({
+        where: {
+          id: { not: id },
+          name: checkName,
+          institution: checkInst,
+        },
+      });
+
+      if (existingExact) {
+        return res.status(400).json({
+          error: checkInst
+            ? `Tim "${checkName}" dari ${checkInst} sudah ada di database.`
+            : `Tim "${checkName}" sudah ada di database.`,
+        });
+      }
+    }
+
     let finalLogoUrl = inputLogoUrl;
     if (req.file) {
       finalLogoUrl = `/uploads/${req.file.filename}`;
@@ -161,10 +257,10 @@ export async function updateTeam(req: Request, res: Response) {
     const updated = await prisma.team.update({
       where: { id },
       data: {
-        ...(name && { name: name.trim() }),
+        ...(nameTrimmed !== undefined && { name: nameTrimmed }),
         ...(shortName && { shortName: shortName.trim().toUpperCase() }),
         ...(colorHex && { colorHex }),
-        ...(institution !== undefined && { institution: institution ? String(institution).trim() : null }),
+        ...(instTrimmed !== undefined && { institution: instTrimmed }),
         ...(finalLogoUrl !== undefined && { logoUrl: finalLogoUrl }),
       },
     });

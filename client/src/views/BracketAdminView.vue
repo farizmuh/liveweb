@@ -387,10 +387,13 @@
                   type="checkbox"
                   :value="t.id"
                   v-model="selectedTeamIds"
-                  class="rounded bg-slate-950 border-slate-700 text-amber-500"
+                  class="rounded bg-slate-950 border-slate-700 text-amber-500 shrink-0"
                 />
-                <span class="font-black text-amber-300">[{{ t.shortName }}]</span>
-                <span class="truncate text-white">{{ t.name }}</span>
+                <span class="font-black text-amber-300 shrink-0">[{{ t.shortName }}]</span>
+                <div class="min-w-0 flex-1">
+                  <span class="truncate text-white block font-medium">{{ t.name }}</span>
+                  <span v-if="t.institution" class="text-[10px] text-cyan-300 truncate block">{{ t.institution }}</span>
+                </div>
               </label>
             </div>
             <p class="text-[11px] text-slate-400 mt-1">

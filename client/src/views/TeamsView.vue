@@ -426,7 +426,16 @@ KRAKEN ESPORTS	SMP BHAKTI"
                 <div class="flex items-center gap-2 truncate min-w-0">
                   <span class="text-[10px] text-slate-500 font-mono w-5 shrink-0">{{ idx + 1 }}.</span>
                   <div class="min-w-0">
-                    <p class="font-bold text-white truncate">{{ item.name }}</p>
+                    <div class="flex items-center gap-1.5 truncate">
+                      <p class="font-bold text-white truncate">{{ item.name }}</p>
+                      <span
+                        v-if="item.isNameAdjusted"
+                        class="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-semibold shrink-0"
+                        title="Nama tim otomatis disesuaikan karena terdapat nama yang sama dari instansi lain"
+                      >
+                        ⚠️ Nama Disesuaikan
+                      </span>
+                    </div>
                     <p v-if="item.institution" class="text-[10px] text-cyan-300 truncate flex items-center gap-1 font-medium">
                       <GraduationCap class="w-3 h-3 text-cyan-400 shrink-0" />
                       <span class="truncate">{{ item.institution }}</span>
@@ -677,8 +686,8 @@ const parsedBulkTeams = computed(() => {
   if (!bulkText.value.trim()) return [];
 
   const lines = bulkText.value.split(/\r?\n/);
-  const result: Array<{ name: string; shortName: string; institution?: string | null; isAutoTag: boolean }> = [];
-  const seen = new Set<string>();
+  const rawList: Array<{ name: string; shortName: string; institution?: string | null; isAutoTag: boolean }> = [];
+  const seenExact = new Set<string>();
 
   for (const rawLine of lines) {
     const line = rawLine.trim();
@@ -722,11 +731,18 @@ const parsedBulkTeams = computed(() => {
 
     if (!name) continue;
 
-    // Remove numbers like "1. ", "1)", etc. from start of name if copied from numbered lists
+    // Bersihkan penomoran di depan nama jika di-copy dari list (cth: "1. ", "1)")
     name = name.replace(/^\d+[\.\)\-]\s*/, "").trim();
     if (!name) continue;
 
-    // Auto tag if missing
+    const instTrimmed = institution ? institution.trim() : null;
+    const exactKey = `${name.toUpperCase()}___${(instTrimmed || "").toUpperCase()}`;
+
+    // Lewati jika duplikat persis di dalam teks input
+    if (seenExact.has(exactKey)) continue;
+    seenExact.add(exactKey);
+
+    // Auto tag jika tidak ada
     if (!shortName) {
       shortName = generateTag(name);
       isAutoTag = true;
@@ -734,19 +750,47 @@ const parsedBulkTeams = computed(() => {
       shortName = shortName.toUpperCase().slice(0, 5);
     }
 
-    const key = name.toUpperCase();
-    if (!seen.has(key)) {
-      seen.add(key);
-      result.push({
-        name,
-        shortName,
-        institution: institution ? institution.trim() : null,
-        isAutoTag,
-      });
-    }
+    rawList.push({
+      name,
+      shortName,
+      institution: instTrimmed,
+      isAutoTag,
+    });
   }
 
-  return result;
+  // Hitung frekuensi nama tim di batch input
+  const nameCounts = new Map<string, number>();
+  for (const item of rawList) {
+    const k = item.name.toUpperCase();
+    nameCounts.set(k, (nameCounts.get(k) || 0) + 1);
+  }
+
+  // Nama tim yang sudah ada di database saat ini
+  const dbExistingNames = new Set(teamStore.teams.map((t) => t.name.toUpperCase()));
+
+  // Kembalikan daftar tim dengan penyesuaian nama otomatis jika terjadi tabrakan nama beda sekolah
+  return rawList.map((item) => {
+    const upper = item.name.toUpperCase();
+    const hasBatchCollision = (nameCounts.get(upper) || 0) > 1;
+    const hasDbCollision = dbExistingNames.has(upper);
+
+    let finalName = item.name;
+    let isNameAdjusted = false;
+
+    if (item.institution && (hasBatchCollision || hasDbCollision)) {
+      const instSuffix = `(${item.institution})`;
+      if (!item.name.toLowerCase().endsWith(instSuffix.toLowerCase())) {
+        finalName = `${item.name} (${item.institution})`;
+        isNameAdjusted = true;
+      }
+    }
+
+    return {
+      ...item,
+      name: finalName,
+      isNameAdjusted,
+    };
+  });
 });
 
 function handleBulkFileUpload(e: Event) {
