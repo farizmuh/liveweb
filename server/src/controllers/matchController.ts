@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { prisma } from "../config/db.js";
 import { matchState } from "../services/matchState.js";
+import { bracketService } from "../services/bracketService.js";
 import { AuthenticatedRequest } from "../middlewares/auth.js";
 
 export async function getActiveMatch(req: Request, res: Response) {
@@ -130,6 +131,20 @@ export async function setWaitingState(req: Request, res: Response) {
     if (!matchKey) return res.status(400).json({ error: "matchKey wajib diisi." });
 
     matchState.setCourtWaitingState(matchKey, isWaiting ?? true);
+
+    if (isWaiting) {
+      // Sinkronkan juga bracket match yang mungkin masih terhubung ke meja ini agar kembali ke status READY
+      await prisma.bracketMatch.updateMany({
+        where: { courtMatchKey: matchKey, status: "LIVE" },
+        data: {
+          status: "READY",
+          assignedCourt: null,
+          courtMatchKey: null,
+        },
+      });
+      bracketService.broadcastBracket();
+    }
+
     return res.json({ success: true, match: matchState.getMatchByKey(matchKey) });
   } catch (error) {
     return res.status(500).json({ error: "Gagal mengubah status menunggu meja." });

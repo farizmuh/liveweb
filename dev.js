@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { spawn, execSync } from "node:child_process";
 import path from "node:path";
 import process from "node:process";
 
@@ -28,14 +28,41 @@ const env = {
   ComSpec: process.env.ComSpec || `${sys32}\\cmd.exe`,
 };
 
-const npmCmd = process.platform === "win32" ? "npm.cmd" : "npm";
+// Fungsi otomatis membebaskan port jika ada proses node lama yang masih menyangkut
+function freePort(port) {
+  try {
+    if (process.platform === "win32") {
+      const output = execSync(`netstat -ano | findstr :${port}`, { env, encoding: "utf8" });
+      const lines = output.split(/\r?\n/).filter(Boolean);
+      for (const line of lines) {
+        if (line.includes("LISTENING")) {
+          const parts = line.trim().split(/\s+/);
+          const pid = parts[parts.length - 1];
+          if (pid && pid !== "0" && pid !== String(process.pid)) {
+            try {
+              execSync(`taskkill /F /PID ${pid}`, { env, stdio: "ignore" });
+              console.log(`🧹 Membersihkan proses lama (PID ${pid}) pada port ${port}...`);
+            } catch {}
+          }
+        }
+      }
+    }
+  } catch {}
+}
 
 console.log("=======================================================");
 console.log("🎮 Menjalankan Esports Server & Client...");
+
+// Bersihkan port 3000 (server) & 5173 (client) sebelum memulai
+freePort(3000);
+freePort(5173);
+
 console.log("📡 Backend : http://localhost:3000");
 console.log("💻 Frontend: http://localhost:5173");
 console.log("Tekan Ctrl+C untuk menghentikan kedua server.");
 console.log("=======================================================\n");
+
+const npmCmd = process.platform === "win32" ? "npm.cmd" : "npm";
 
 const server = spawn(npmCmd, ["run", "dev"], {
   cwd: path.resolve(process.cwd(), "server"),

@@ -83,12 +83,28 @@ export async function assignToCourt(req: Request, res: Response) {
   }
 }
 
+export async function unassignFromCourt(req: Request, res: Response) {
+  try {
+    const { bracketMatchId } = req.body;
+    if (!bracketMatchId) {
+      return res.status(400).json({ error: "bracketMatchId diperlukan." });
+    }
+
+    const result = await bracketService.unassignMatchFromCourt(bracketMatchId);
+    return res.json(result);
+  } catch (error: any) {
+    return res.status(400).json({ error: error.message || "Gagal membatalkan penugasan ke meja." });
+  }
+}
+
 export async function finishMatch(req: Request, res: Response) {
   try {
-    const { courtMatchKey } = req.body;
-    if (!courtMatchKey) return res.status(400).json({ error: "courtMatchKey diperlukan." });
+    const { courtMatchKey, bracketMatchId } = req.body;
+    if (!courtMatchKey && !bracketMatchId) {
+      return res.status(400).json({ error: "courtMatchKey atau bracketMatchId diperlukan." });
+    }
 
-    const result = await bracketService.finishMatch(courtMatchKey);
+    const result = await bracketService.finishMatch(courtMatchKey, bracketMatchId);
     return res.json(result);
   } catch (error: any) {
     return res.status(400).json({ error: error.message || "Gagal menyelesaikan pertandingan." });

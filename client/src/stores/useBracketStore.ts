@@ -181,7 +181,26 @@ export const useBracketStore = defineStore("bracket", () => {
     return data;
   }
 
-  async function finishMatch(courtMatchKey: string) {
+  async function unassignMatchFromCourt(bracketMatchId: string) {
+    const authStore = useAuthStore();
+    const res = await fetch("/api/bracket/unassign", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${authStore.token}`,
+      },
+      body: JSON.stringify({ bracketMatchId }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Gagal menarik pertandingan dari meja.");
+    if (tournament.value?.id) {
+      await fetchActiveBracket(tournament.value.id);
+    }
+    return data;
+  }
+
+  async function finishMatch(courtMatchKey: string, bracketMatchId?: string) {
     const authStore = useAuthStore();
     const res = await fetch("/api/bracket/finish", {
       method: "POST",
@@ -189,7 +208,7 @@ export const useBracketStore = defineStore("bracket", () => {
         "Content-Type": "application/json",
         Authorization: `Bearer ${authStore.token}`,
       },
-      body: JSON.stringify({ courtMatchKey }),
+      body: JSON.stringify({ courtMatchKey, bracketMatchId }),
     });
 
     const data = await res.json();
@@ -211,6 +230,7 @@ export const useBracketStore = defineStore("bracket", () => {
     shuffleBracket,
     finalizeBracket,
     assignMatchToCourt,
+    unassignMatchFromCourt,
     finishMatch,
   };
 });

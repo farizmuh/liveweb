@@ -96,6 +96,7 @@ app.post("/api/bracket/create", requireAuth, bracketController.createBracket);
 app.post("/api/bracket/shuffle", requireAuth, bracketController.shuffleBracket);
 app.post("/api/bracket/finalize", requireAuth, bracketController.finalizeBracket);
 app.post("/api/bracket/assign", requireAuth, bracketController.assignToCourt);
+app.post("/api/bracket/unassign", requireAuth, bracketController.unassignFromCourt);
 app.post("/api/bracket/finish", requireAuth, bracketController.finishMatch);
 
 // Specific redirects for .html routes

@@ -30,55 +30,10 @@
         </div>
       </div>
 
-      <!-- VIEW MODE SWITCHER & SMART AUTO STATUS -->
-      <div class="flex items-center gap-2">
-        <div class="flex items-center bg-black/60 p-1 rounded-xl border border-slate-700/80 gap-1 text-xs font-bold">
-          <!-- Button Otomatis Pintar -->
-          <button
-            @click="setManualView(null)"
-            class="px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 transition text-xs"
-            :class="manualView === null ? 'bg-emerald-500 text-black font-black shadow-lg animate-pulse' : 'text-slate-400 hover:text-white'"
-            title="Mode Otomatis: Layar otomatis menyesuaikan diri mengikuti fase turnamen yang aktif"
-          >
-            <Sparkles class="w-3.5 h-3.5" />
-            <span>Otomatis</span>
-          </button>
-
-          <button
-            @click="setManualView('round1')"
-            class="px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 transition text-xs"
-            :class="effectiveView === 'round1' && manualView !== null ? 'bg-amber-500 text-black font-black shadow-gold-glow' : 'text-slate-400 hover:text-white'"
-            title="Kunci ke Babak 1 (3 Kolom)"
-          >
-            <Swords class="w-3.5 h-3.5" />
-            <span>Babak 1 (3 Kolom)</span>
-          </button>
-          
-          <button
-            @click="setManualView('tree')"
-            class="px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 transition text-xs"
-            :class="effectiveView === 'tree' && manualView !== null ? 'bg-amber-500 text-black font-black shadow-gold-glow' : 'text-slate-400 hover:text-white'"
-            title="Kunci ke Bagan Pohon Lengkap"
-          >
-            <GitBranch class="w-3.5 h-3.5" />
-            <span>Pohon (Tree)</span>
-          </button>
-          
-          <button
-            @click="setManualView('playoffs')"
-            class="px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 transition text-xs"
-            :class="effectiveView === 'playoffs' && manualView !== null ? 'bg-amber-500 text-black font-black shadow-gold-glow' : 'text-slate-400 hover:text-white'"
-            title="Kunci ke Babak 8 Besar / Playoffs"
-          >
-            <Trophy class="w-3.5 h-3.5" />
-            <span>Playoffs</span>
-          </button>
-        </div>
-
-        <div class="px-3 py-1.5 rounded-xl bg-black/60 border border-amber-500/40 flex items-center gap-2">
-          <Trophy class="w-4 h-4 text-amber-400 animate-bounce" />
-          <span class="text-xs font-black text-amber-300 uppercase tracking-widest">OBS LIVE STAGE</span>
-        </div>
+      <!-- OBS LIVE STAGE BADGE (Bersih untuk siaran resmi tanpa tombol klik) -->
+      <div class="px-4 py-2 rounded-xl bg-black/60 border border-amber-500/40 flex items-center gap-2 shadow-gold-glow">
+        <Trophy class="w-4 h-4 text-amber-400 animate-bounce" />
+        <span class="text-xs font-black text-amber-300 uppercase tracking-widest">OBS LIVE STAGE</span>
       </div>
     </header>
 
@@ -87,7 +42,7 @@
     <!-- ============================================================== -->
     <Transition name="stage-fade" mode="out-in">
       
-      <!-- MODE 1: FOKUS BABAK 1 (ROUND 1 - 3 KOLOM GRID UNTUK 57 TIM) -->
+      <!-- MODE 1: FOKUS BABAK 1 (ROUND 1 - 3 KOLOM GRID UNTUK 57 TIM / SS 2) -->
       <main
         v-if="effectiveView === 'round1'"
         key="round1-view"
@@ -96,7 +51,7 @@
         <!-- Sub-header keterangan -->
         <div class="flex items-center justify-between pb-1 text-xs">
           <div class="flex items-center gap-2">
-            <span class="px-2.5 py-0.5 rounded-md bg-amber-500 text-black font-black text-[11px] uppercase tracking-wider">
+            <span class="px-2.5 py-0.5 rounded-md bg-amber-500 text-black font-black text-[11px] uppercase tracking-wider shadow">
               FASE PENYISIHAN (ROUND 1)
             </span>
             <span class="text-slate-300 font-bold">
@@ -224,7 +179,7 @@
             </div>
           </div>
 
-          <!-- KOLOM 3: Match 18 - 25 & PANEL 7 TIM UNGGULAN -->
+          <!-- KOLOM 3: Match 18 - 25 & PANEL TIM UNGGULAN -->
           <div class="flex flex-col justify-between gap-1 overflow-hidden">
             <div
               v-for="m in round1Col3"
@@ -315,14 +270,172 @@
         </div>
       </main>
 
-      <!-- MODE 2: PLAYOFFS VIEW (FOKUS 8 BESAR - QUARTERFINALS, SEMIS, FINALS) -->
+      <!-- MODE 2: GRID ADAPTIF 2 KOLOM (UNTUK ROUND OF 32 & ROUND OF 16) -->
+      <main
+        v-else-if="effectiveView === 'grid-active'"
+        key="grid-active-view"
+        class="w-full flex-1 flex flex-col py-2.5 z-10 overflow-hidden justify-between"
+      >
+        <!-- Sub-header babak aktif -->
+        <div class="flex items-center justify-between pb-2 text-xs shrink-0">
+          <div class="flex items-center gap-2">
+            <span class="px-2.5 py-0.5 rounded-md bg-blue-600 text-white font-black text-[11px] uppercase tracking-wider shadow">
+              {{ currentGridRound?.name || 'BABAK UTAMA' }}
+            </span>
+            <span class="text-slate-300 font-bold">
+              Total {{ currentGridRound?.matches.length || 0 }} Pertandingan &bull; {{ completedGridCount }}/{{ currentGridRound?.matches.length || 0 }} Selesai
+            </span>
+          </div>
+          <div class="flex items-center gap-2 text-slate-400 text-[11px]">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+            <span>Otomatis Beralih ke Babak Berikutnya Setelah Semua Match Selesai</span>
+          </div>
+        </div>
+
+        <!-- 2 KOLOM LUAS (PAS DI LAYAR 1080P TANPA SCROLLBAR) -->
+        <div class="grid grid-cols-2 gap-5 flex-1 overflow-hidden py-1">
+          
+          <!-- KOLOM 1 -->
+          <div class="flex flex-col justify-between gap-2 overflow-hidden h-full">
+            <div
+              v-for="m in gridActiveCol1"
+              :key="m.id"
+              class="rounded-xl border bg-slate-950/80 px-4 py-2 flex flex-col justify-between transition shadow-md relative overflow-hidden"
+              :class="[
+                m.status === 'LIVE' ? 'border-2 border-amber-400 bg-amber-950/30 shadow-gold-glow scale-[1.01]' : 'border-slate-800 hover:border-slate-700'
+              ]"
+            >
+              <!-- Baris Atas Info Match -->
+              <div class="flex items-center justify-between text-[10px] font-bold text-slate-400 pb-1 border-b border-slate-850">
+                <span class="uppercase tracking-wider text-amber-400 font-extrabold">MATCH #{{ m.matchOrder }}</span>
+                <span v-if="m.status === 'LIVE'" class="text-red-400 uppercase tracking-widest flex items-center gap-1.5 font-black">
+                  <span class="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
+                  LIVE DI {{ m.assignedCourt || 'COURT' }}
+                </span>
+                <span v-else-if="m.status === 'COMPLETED'" class="text-emerald-400 uppercase tracking-wider font-semibold">SELESAI</span>
+                <span v-else class="text-slate-500 uppercase">{{ m.status }}</span>
+              </div>
+
+              <!-- Team A -->
+              <div class="flex items-center justify-between py-1 text-xs">
+                <div class="flex items-center gap-2.5 overflow-hidden min-w-0 flex-1 pr-2">
+                  <div class="w-6 h-6 rounded bg-black/70 border border-slate-700 p-0.5 flex items-center justify-center shrink-0">
+                    <img v-if="m.teamALogo" :src="m.teamALogo" class="w-full h-full object-contain" />
+                    <span v-else class="text-[9px] font-black text-amber-400">{{ m.teamAShort?.slice(0, 3) || '?' }}</span>
+                  </div>
+                  <div class="truncate flex-1">
+                    <span class="font-bold text-white truncate block leading-tight text-sm" :class="m.winnerTeam === 'A' ? 'text-amber-300 font-black' : ''">
+                      {{ m.teamAName || (m.isBye ? 'BYE' : 'TBD') }}
+                    </span>
+                    <span v-if="m.teamA?.institution || m.teamAInstitution" class="text-[9px] text-cyan-300 font-medium truncate block leading-none mt-0.5">
+                      {{ m.teamA?.institution || m.teamAInstitution }}
+                    </span>
+                  </div>
+                </div>
+                <span class="font-display font-black text-base text-right shrink-0 w-8" :class="m.winnerTeam === 'A' ? 'text-amber-300 drop-shadow' : 'text-slate-400'">
+                  {{ m.scoreA }}
+                </span>
+              </div>
+
+              <!-- Team B -->
+              <div class="flex items-center justify-between py-1 text-xs border-t border-slate-900">
+                <div class="flex items-center gap-2.5 overflow-hidden min-w-0 flex-1 pr-2">
+                  <div class="w-6 h-6 rounded bg-black/70 border border-slate-700 p-0.5 flex items-center justify-center shrink-0">
+                    <img v-if="m.teamBLogo" :src="m.teamBLogo" class="w-full h-full object-contain" />
+                    <span v-else class="text-[9px] font-black text-amber-400">{{ m.teamBShort?.slice(0, 3) || '?' }}</span>
+                  </div>
+                  <div class="truncate flex-1">
+                    <span class="font-bold text-white truncate block leading-tight text-sm" :class="m.winnerTeam === 'B' ? 'text-amber-300 font-black' : ''">
+                      {{ m.teamBName || (m.isBye ? 'BYE' : 'TBD') }}
+                    </span>
+                    <span v-if="m.teamB?.institution || m.teamBInstitution" class="text-[9px] text-cyan-300 font-medium truncate block leading-none mt-0.5">
+                      {{ m.teamB?.institution || m.teamBInstitution }}
+                    </span>
+                  </div>
+                </div>
+                <span class="font-display font-black text-base text-right shrink-0 w-8" :class="m.winnerTeam === 'B' ? 'text-amber-300 drop-shadow' : 'text-slate-400'">
+                  {{ m.scoreB }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- KOLOM 2 -->
+          <div class="flex flex-col justify-between gap-2 overflow-hidden h-full">
+            <div
+              v-for="m in gridActiveCol2"
+              :key="m.id"
+              class="rounded-xl border bg-slate-950/80 px-4 py-2 flex flex-col justify-between transition shadow-md relative overflow-hidden"
+              :class="[
+                m.status === 'LIVE' ? 'border-2 border-amber-400 bg-amber-950/30 shadow-gold-glow scale-[1.01]' : 'border-slate-800 hover:border-slate-700'
+              ]"
+            >
+              <!-- Baris Atas Info Match -->
+              <div class="flex items-center justify-between text-[10px] font-bold text-slate-400 pb-1 border-b border-slate-850">
+                <span class="uppercase tracking-wider text-amber-400 font-extrabold">MATCH #{{ m.matchOrder }}</span>
+                <span v-if="m.status === 'LIVE'" class="text-red-400 uppercase tracking-widest flex items-center gap-1.5 font-black">
+                  <span class="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
+                  LIVE DI {{ m.assignedCourt || 'COURT' }}
+                </span>
+                <span v-else-if="m.status === 'COMPLETED'" class="text-emerald-400 uppercase tracking-wider font-semibold">SELESAI</span>
+                <span v-else class="text-slate-500 uppercase">{{ m.status }}</span>
+              </div>
+
+              <!-- Team A -->
+              <div class="flex items-center justify-between py-1 text-xs">
+                <div class="flex items-center gap-2.5 overflow-hidden min-w-0 flex-1 pr-2">
+                  <div class="w-6 h-6 rounded bg-black/70 border border-slate-700 p-0.5 flex items-center justify-center shrink-0">
+                    <img v-if="m.teamALogo" :src="m.teamALogo" class="w-full h-full object-contain" />
+                    <span v-else class="text-[9px] font-black text-amber-400">{{ m.teamAShort?.slice(0, 3) || '?' }}</span>
+                  </div>
+                  <div class="truncate flex-1">
+                    <span class="font-bold text-white truncate block leading-tight text-sm" :class="m.winnerTeam === 'A' ? 'text-amber-300 font-black' : ''">
+                      {{ m.teamAName || (m.isBye ? 'BYE' : 'TBD') }}
+                    </span>
+                    <span v-if="m.teamA?.institution || m.teamAInstitution" class="text-[9px] text-cyan-300 font-medium truncate block leading-none mt-0.5">
+                      {{ m.teamA?.institution || m.teamAInstitution }}
+                    </span>
+                  </div>
+                </div>
+                <span class="font-display font-black text-base text-right shrink-0 w-8" :class="m.winnerTeam === 'A' ? 'text-amber-300 drop-shadow' : 'text-slate-400'">
+                  {{ m.scoreA }}
+                </span>
+              </div>
+
+              <!-- Team B -->
+              <div class="flex items-center justify-between py-1 text-xs border-t border-slate-900">
+                <div class="flex items-center gap-2.5 overflow-hidden min-w-0 flex-1 pr-2">
+                  <div class="w-6 h-6 rounded bg-black/70 border border-slate-700 p-0.5 flex items-center justify-center shrink-0">
+                    <img v-if="m.teamBLogo" :src="m.teamBLogo" class="w-full h-full object-contain" />
+                    <span v-else class="text-[9px] font-black text-amber-400">{{ m.teamBShort?.slice(0, 3) || '?' }}</span>
+                  </div>
+                  <div class="truncate flex-1">
+                    <span class="font-bold text-white truncate block leading-tight text-sm" :class="m.winnerTeam === 'B' ? 'text-amber-300 font-black' : ''">
+                      {{ m.teamBName || (m.isBye ? 'BYE' : 'TBD') }}
+                    </span>
+                    <span v-if="m.teamB?.institution || m.teamBInstitution" class="text-[9px] text-cyan-300 font-medium truncate block leading-none mt-0.5">
+                      {{ m.teamB?.institution || m.teamBInstitution }}
+                    </span>
+                  </div>
+                </div>
+                <span class="font-display font-black text-base text-right shrink-0 w-8" :class="m.winnerTeam === 'B' ? 'text-amber-300 drop-shadow' : 'text-slate-400'">
+                  {{ m.scoreB }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </main>
+
+      <!-- MODE 3: PLAYOFFS VIEW (FOKUS 8 BESAR - QUARTERFINALS, SEMIS, FINALS / SS 3) -->
       <main
         v-else-if="effectiveView === 'playoffs'"
         key="playoffs-view"
         class="w-full flex-1 flex flex-col py-3 z-10 overflow-hidden justify-between"
       >
         <!-- Sub-header Playoff -->
-        <div class="flex items-center justify-between pb-2 text-xs">
+        <div class="flex items-center justify-between pb-2 text-xs shrink-0">
           <div class="flex items-center gap-2">
             <span class="px-2.5 py-0.5 rounded-md bg-gradient-to-r from-amber-500 to-amber-300 text-black font-black text-[11px] uppercase tracking-wider shadow-gold-glow">
               🏆 FASE PLAYOFFS (8 BESAR MENUJU JUARA)
@@ -378,17 +491,22 @@
                     !m.teamAId ? 'opacity-40' : ''
                   ]"
                 >
-                  <div class="flex items-center gap-3 overflow-hidden">
+                  <div class="flex items-center gap-3 overflow-hidden min-w-0 flex-1 pr-2">
                     <div class="w-9 h-9 rounded-xl bg-black/80 border border-slate-700 p-1 flex items-center justify-center shrink-0">
                       <img v-if="m.teamALogo" :src="m.teamALogo" class="w-full h-full object-contain" />
                       <span v-else class="text-xs font-black text-amber-400">{{ m.teamAShort?.slice(0, 3) || '?' }}</span>
                     </div>
-                    <span class="text-base font-black uppercase text-white truncate max-w-[240px]">
-                      {{ m.teamAName || (m.isBye ? 'BYE' : 'TBD') }}
-                    </span>
+                    <div class="min-w-0 flex-1">
+                      <span class="text-base font-black uppercase text-white truncate block max-w-[240px]">
+                        {{ m.teamAName || (m.isBye ? 'BYE' : 'TBD') }}
+                      </span>
+                      <span v-if="m.teamA?.institution || m.teamAInstitution" class="text-[10px] text-cyan-300 font-semibold truncate block leading-none mt-0.5">
+                        {{ m.teamA?.institution || m.teamAInstitution }}
+                      </span>
+                    </div>
                   </div>
                   <div
-                    class="w-10 text-center font-display text-2xl font-black text-white"
+                    class="w-10 text-center font-display text-2xl font-black text-white shrink-0"
                     :class="m.winnerTeam === 'A' ? 'text-amber-300 drop-shadow' : 'text-slate-400'"
                   >
                     {{ m.scoreA }}
@@ -403,17 +521,22 @@
                     !m.teamBId ? 'opacity-40' : ''
                   ]"
                 >
-                  <div class="flex items-center gap-3 overflow-hidden">
+                  <div class="flex items-center gap-3 overflow-hidden min-w-0 flex-1 pr-2">
                     <div class="w-9 h-9 rounded-xl bg-black/80 border border-slate-700 p-1 flex items-center justify-center shrink-0">
                       <img v-if="m.teamBLogo" :src="m.teamBLogo" class="w-full h-full object-contain" />
                       <span v-else class="text-xs font-black text-amber-400">{{ m.teamBShort?.slice(0, 3) || '?' }}</span>
                     </div>
-                    <span class="text-base font-black uppercase text-white truncate max-w-[240px]">
-                      {{ m.teamBName || (m.isBye ? 'BYE' : 'TBD') }}
-                    </span>
+                    <div class="min-w-0 flex-1">
+                      <span class="text-base font-black uppercase text-white truncate block max-w-[240px]">
+                        {{ m.teamBName || (m.isBye ? 'BYE' : 'TBD') }}
+                      </span>
+                      <span v-if="m.teamB?.institution || m.teamBInstitution" class="text-[10px] text-cyan-300 font-semibold truncate block leading-none mt-0.5">
+                        {{ m.teamB?.institution || m.teamBInstitution }}
+                      </span>
+                    </div>
                   </div>
                   <div
-                    class="w-10 text-center font-display text-2xl font-black text-white"
+                    class="w-10 text-center font-display text-2xl font-black text-white shrink-0"
                     :class="m.winnerTeam === 'B' ? 'text-amber-300 drop-shadow' : 'text-slate-400'"
                   >
                     {{ m.scoreB }}
@@ -421,116 +544,6 @@
                 </div>
 
               </div>
-            </div>
-          </div>
-        </div>
-      </main>
-
-      <!-- MODE 3: BAGAN POHON LENGKAP (TREE / BABAK UTAMA) -->
-      <main
-        v-else
-        key="tree-view"
-        class="w-full flex-1 flex items-stretch justify-start py-4 overflow-x-auto z-10 gap-6"
-      >
-        <div v-if="!tournament || rounds.length === 0" class="text-center text-slate-400 text-lg font-bold w-full flex items-center justify-center">
-          Memuat bagan turnamen...
-        </div>
-
-        <!-- ROUND COLUMNS -->
-        <div
-          v-for="roundObj in displayedTreeRounds"
-          :key="roundObj.round"
-          class="flex-1 flex flex-col h-full min-w-[280px] max-w-[320px] shrink-0"
-        >
-          <!-- Round Title Header -->
-          <div class="text-center pb-2 shrink-0">
-            <span class="px-3 py-1 rounded-lg bg-black/80 border border-amber-500/50 text-amber-300 font-black text-xs uppercase tracking-widest shadow">
-              {{ roundObj.name }}
-            </span>
-            <span class="block text-[10px] text-slate-400 font-semibold mt-1">
-              {{ roundObj.matches.length }} Pertandingan
-            </span>
-          </div>
-
-          <!-- Matches in this Round -->
-          <div class="flex-1 flex flex-col justify-around py-1 gap-2 overflow-y-auto pr-1">
-            <div
-              v-for="m in roundObj.matches"
-              :key="m.id"
-              class="rounded-xl metallic-card border transition-all duration-300 shadow-xl overflow-hidden relative shrink-0"
-              :class="[
-                m.status === 'LIVE' ? 'border-2 border-amber-400 shadow-gold-glow scale-[1.02]' : 'border-slate-700/80'
-              ]"
-            >
-              <!-- Live Indicator Badge -->
-              <div
-                v-if="m.status === 'LIVE'"
-                class="w-full bg-red-600/90 text-white text-[10px] font-black uppercase tracking-widest text-center py-0.5 flex items-center justify-center gap-1.5 shadow"
-              >
-                <span class="w-1.5 h-1.5 rounded-full bg-white animate-ping"></span>
-                <span>LIVE DI {{ m.assignedCourt || 'COURT' }}</span>
-              </div>
-
-              <!-- Team A Row -->
-              <div
-                class="flex items-center justify-between p-2.5 transition-colors border-b border-slate-800"
-                :class="[
-                  m.winnerTeam === 'A' ? 'bg-amber-500/20 font-bold' : 'bg-slate-950/60',
-                  m.isBye && !m.teamAId ? 'opacity-40' : ''
-                ]"
-              >
-                <div class="flex items-center gap-2.5 overflow-hidden">
-                  <div class="w-7 h-7 rounded bg-black/60 border border-slate-700 p-0.5 flex items-center justify-center shrink-0">
-                    <img v-if="m.teamALogo" :src="m.teamALogo" class="w-full h-full object-contain" />
-                    <span v-else class="text-[10px] font-bold text-amber-400">{{ m.teamAShort?.slice(0, 3) || '?' }}</span>
-                  </div>
-                  <div class="truncate max-w-[150px]">
-                    <span class="text-sm font-black uppercase text-white truncate block leading-tight">
-                      {{ m.teamAName || (m.isBye ? 'BYE' : 'TBD') }}
-                    </span>
-                    <span v-if="m.teamA?.institution || m.teamAInstitution" class="text-[9px] text-cyan-300 font-semibold truncate block leading-none">
-                      {{ m.teamA?.institution || m.teamAInstitution }}
-                    </span>
-                  </div>
-                </div>
-                <div
-                  class="w-7 text-center font-display text-xl font-black text-white"
-                  :class="m.winnerTeam === 'A' ? 'text-amber-300 drop-shadow' : 'text-slate-400'"
-                >
-                  {{ m.scoreA }}
-                </div>
-              </div>
-
-              <!-- Team B Row -->
-              <div
-                class="flex items-center justify-between p-2.5 transition-colors"
-                :class="[
-                  m.winnerTeam === 'B' ? 'bg-amber-500/20 font-bold' : 'bg-slate-950/60',
-                  m.isBye && !m.teamBId ? 'opacity-40' : ''
-                ]"
-              >
-                <div class="flex items-center gap-2.5 overflow-hidden">
-                  <div class="w-7 h-7 rounded bg-black/60 border border-slate-700 p-0.5 flex items-center justify-center shrink-0">
-                    <img v-if="m.teamBLogo" :src="m.teamBLogo" class="w-full h-full object-contain" />
-                    <span v-else class="text-[10px] font-bold text-amber-400">{{ m.teamBShort?.slice(0, 3) || '?' }}</span>
-                  </div>
-                  <div class="truncate max-w-[150px]">
-                    <span class="text-sm font-black uppercase text-white truncate block leading-tight">
-                      {{ m.teamBName || (m.isBye ? 'BYE' : 'TBD') }}
-                    </span>
-                    <span v-if="m.teamB?.institution || m.teamBInstitution" class="text-[9px] text-cyan-300 font-semibold truncate block leading-none">
-                      {{ m.teamB?.institution || m.teamBInstitution }}
-                    </span>
-                  </div>
-                </div>
-                <div
-                  class="w-7 text-center font-display text-xl font-black text-white"
-                  :class="m.winnerTeam === 'B' ? 'text-amber-300 drop-shadow' : 'text-slate-400'"
-                >
-                  {{ m.scoreB }}
-                </div>
-              </div>
-
             </div>
           </div>
         </div>
@@ -563,24 +576,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { computed, onMounted } from "vue";
 import { useRoute } from "vue-router";
 import { useBracketStore, type BracketMatchNode } from "../stores/useBracketStore";
-import { Trophy, GitBranch, Swords, Crown, Sparkles } from "lucide-vue-next";
+import { Trophy, Crown } from "lucide-vue-next";
 
 const route = useRoute();
 const bracketStore = useBracketStore();
 
 const tournament = computed(() => bracketStore.tournament);
 
-// Manual View Override jika diklik oleh operator (null = Otomatis Pintar)
-const manualView = ref<"round1" | "tree" | "playoffs" | null>(null);
-
-function setManualView(view: "round1" | "tree" | "playoffs" | null) {
-  manualView.value = view;
-}
-
-// Group matches by round for bracket tree columns
+// Group matches by round for bracket
 const rounds = computed(() => {
   if (!tournament.value?.matches) return [];
 
@@ -663,6 +669,45 @@ const byeTeamsInR32 = computed(() => {
   return byes;
 });
 
+// Ronde aktif sebelum Quarterfinals (Round of 32 atau Round of 16)
+const currentGridRound = computed(() => {
+  if (!tournament.value?.matches || rounds.value.length === 0) return null;
+
+  const qfRound = rounds.value.find(
+    (r) => r.name.toLowerCase().includes("quarterfinal") || (rounds.value.length >= 3 && r.round === rounds.value.length - 2)
+  );
+
+  if (rounds.value.length <= 3) return null;
+
+  const preQfRounds = qfRound ? rounds.value.filter((r) => r.round < qfRound.round) : rounds.value.slice(0, -3);
+
+  // Cari ronde terawal yang BELUM 100% selesai (skip Round 1 jika R1 ditangani view khusus)
+  const nonR1PreQf = preQfRounds.filter((r) => r.round > 1);
+  const active = nonR1PreQf.find((r) => r.matches.some((m) => m.status !== "COMPLETED"));
+  return active || nonR1PreQf[nonR1PreQf.length - 1] || null;
+});
+
+// Jumlah match yang selesai di ronde grid aktif
+const completedGridCount = computed(() => {
+  if (!currentGridRound.value) return 0;
+  return currentGridRound.value.matches.filter((m) => m.status === "COMPLETED").length;
+});
+
+// Pembagian 2 Kolom Luas untuk currentGridRound
+const gridActiveCol1 = computed(() => {
+  if (!currentGridRound.value) return [];
+  const matches = currentGridRound.value.matches;
+  const half = Math.ceil(matches.length / 2);
+  return matches.slice(0, half);
+});
+
+const gridActiveCol2 = computed(() => {
+  if (!currentGridRound.value) return [];
+  const matches = currentGridRound.value.matches;
+  const half = Math.ceil(matches.length / 2);
+  return matches.slice(half);
+});
+
 // Seluruh tim peserta turnamen untuk running ticker di footer
 const allTournamentTeams = computed(() => {
   if (!tournament.value?.matches) return [];
@@ -686,56 +731,53 @@ const playoffsRounds = computed(() => {
   return rounds.value.slice(-3);
 });
 
-// Filter rounds untuk mode tree
-const displayedTreeRounds = computed(() => {
-  return rounds.value;
-});
-
 // ==============================================================
 // 🧠 LOGIKA PINTAR OTOMATIS (SMART STAGE DETECTION):
-// Menentukan tampilan secara dinamis mengikuti sisa tim & babak
+// 1. Round 1 belum 100% selesai -> Tampilkan SS 2 (3 Kolom Grid untuk 25 match R1)
+// 2. Round 1 selesai, masuk R32 / R16 -> Tampilkan 2 Kolom Luas per ronde aktif tanpa scrollbar
+// 3. Masuk Quarterfinals (8 Besar) -> Otomatis beralih ke SS 3 (Playoffs)
 // ==============================================================
-const smartAutoView = computed<"round1" | "tree" | "playoffs">(() => {
+const smartAutoView = computed<"round1" | "grid-active" | "playoffs">(() => {
   const matches = tournament.value?.matches || [];
-  if (matches.length === 0) return "tree";
+  if (matches.length === 0) return "playoffs";
 
-  const r1 = round1Matches.value;
-  const isR1Ongoing = r1.length > 8 && r1.some((m) => m.status !== "COMPLETED");
-
-  // 1. Jika masih ada match Round 1 yang belum selesai (turnamen besar 57 tim)
-  if (isR1Ongoing) {
-    return "round1";
-  }
-
-  // 2. Jika Round 1 sudah selesai, periksa apakah sudah masuk Playoffs (8 Besar)
-  const qfRound = rounds.value.find((r) => r.name.toLowerCase().includes("quarterfinal"));
-
-  if (qfRound) {
-    // Periksa apakah semua ronde sebelum Quarterfinals sudah selesai
-    const preQfMatches = matches.filter((m) => m.round < qfRound.round);
-    const allPreQfDone = preQfMatches.every((m) => m.status === "COMPLETED");
-
-    if (allPreQfDone) {
-      return "playoffs";
-    }
-    return "tree";
-  }
-
-  // Jika total ronde <= 3 (seperti turnamen 8 tim)
+  // Turnamen kecil (<= 3 ronde) langsung ke playoffs
   if (rounds.value.length <= 3) {
     return "playoffs";
   }
 
-  return "tree";
+  const qfRound = rounds.value.find(
+    (r) => r.name.toLowerCase().includes("quarterfinal") || (rounds.value.length >= 3 && r.round === rounds.value.length - 2)
+  );
+
+  if (qfRound) {
+    // Cek apakah SEMUA babak sebelum Quarterfinals sudah 100% selesai
+    const preQfMatches = matches.filter((m) => m.round < qfRound.round);
+    const allPreQfDone = preQfMatches.length > 0 && preQfMatches.every((m) => m.status === "COMPLETED");
+
+    if (allPreQfDone) {
+      return "playoffs"; // SS 3
+    }
+  }
+
+  // Jika Round 1 masih ada pertandingan yang belum selesai
+  const r1 = round1Matches.value;
+  const isR1Ongoing = r1.length > 8 && r1.some((m) => m.status !== "COMPLETED");
+
+  if (isR1Ongoing) {
+    return "round1"; // SS 2
+  }
+
+  // Jika Round 1 sudah 100% selesai, tampilkan babak aktif (R32 atau R16) dalam 2 Kolom Luas
+  return "grid-active";
 });
 
-// View yang aktif digunakan di layar (Manual Override > URL Query > Smart Auto)
-const effectiveView = computed<"round1" | "tree" | "playoffs">(() => {
-  if (manualView.value) return manualView.value;
+// View yang aktif digunakan di layar (URL Query override > Smart Auto)
+const effectiveView = computed<"round1" | "grid-active" | "playoffs">(() => {
   const queryView = route.query.view as string;
   if (queryView === "round1" || queryView === "r1") return "round1";
-  if (queryView === "tree") return "tree";
-  if (queryView === "playoffs") return "playoffs";
+  if (queryView === "playoffs" || queryView === "p") return "playoffs";
+  if (queryView === "grid" || queryView === "r32" || queryView === "r16") return "grid-active";
   return smartAutoView.value;
 });
 
@@ -746,31 +788,42 @@ const currentPhaseName = computed(() => {
   } else if (effectiveView.value === "playoffs") {
     return "🏆 FASE 3: PLAYOFFS (8 BESAR - FINAL)";
   } else {
-    return "🌲 FASE 2: BABAK UTAMA (MAIN STAGE)";
+    const rName = currentGridRound.value?.name ? currentGridRound.value.name.toUpperCase() : "BABAK UTAMA";
+    return `⚔️ FASE 2: ${rName}`;
   }
 });
 
 const phaseBadgeClass = computed(() => {
   if (effectiveView.value === "round1") {
-    return "bg-red-600 text-white animate-pulse";
+    return "bg-amber-500/20 text-amber-300 border border-amber-400/50";
   } else if (effectiveView.value === "playoffs") {
-    return "bg-gradient-to-r from-amber-500 to-amber-300 text-black shadow-gold-glow";
+    return "bg-gradient-to-r from-amber-500 to-amber-300 text-black font-black shadow-gold-glow";
   } else {
-    return "bg-blue-600 text-white";
+    return "bg-blue-600/30 text-blue-300 border border-blue-400/50";
   }
 });
 
-onMounted(() => {
-  const tourneyId = (route.query.id as string) || undefined;
-  bracketStore.initSocket(tourneyId);
-  bracketStore.fetchActiveBracket(tourneyId);
+onMounted(async () => {
+  await bracketStore.fetchActiveBracket();
+  bracketStore.initSocket();
 });
 </script>
 
 <style scoped>
-@keyframes marquee {
-  0% { transform: translateX(100%); }
-  100% { transform: translateX(-100%); }
+/* Transisi halus saat beralih fase bagan */
+.stage-fade-enter-active,
+.stage-fade-leave-active {
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.stage-fade-enter-from {
+  opacity: 0;
+  transform: scale(0.98);
+}
+
+.stage-fade-leave-to {
+  opacity: 0;
+  transform: scale(1.02);
 }
 
 .animate-marquee {
@@ -779,25 +832,8 @@ onMounted(() => {
   animation: marquee 35s linear infinite;
 }
 
-.animate-marquee:hover {
-  animation-play-state: paused;
-}
-
-/* Transisi Halus (Smooth Stage Fade) */
-.stage-fade-enter-active,
-.stage-fade-leave-active {
-  transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1), transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.stage-fade-enter-from {
-  opacity: 0;
-  transform: scale(0.98) translateY(8px);
-}
-
-.stage-fade-leave-to {
-  opacity: 0;
-  transform: scale(1.02) translateY(-8px);
+@keyframes marquee {
+  0% { transform: translateX(100%); }
+  100% { transform: translateX(-100%); }
 }
 </style>
-
-

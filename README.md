@@ -29,12 +29,14 @@ Sistem penyiaran (*broadcast*), papan skor (*scoreboard*), dan manajemen bagan t
 
 ### 2. Sistem Bagan Turnamen Otomatis & Skala Besar (`/bracket` & `/overlay/bracket`)
 - **Mendukung Hingga 57+ Tim:**
-  - **Babak 1 (Play-in):** 50 tim (25 match).
+  - **Babak 1 (Penyisihan / Play-in):** 50 tim (25 match).
   - **7 Tim Unggulan (BYE):** Otomatis langsung menunggu di babak utama *Round of 32*.
-- **Tampilan OBS Adaptif Otomatis (Global Link Tanpa Ganti URL):**
-  - Cukup gunakan 1 link global `http://localhost:3000/overlay/bracket` di OBS Browser Source.
-  - **Saat Babak 1 Aktif:** Tampilan otomatis beralih ke **Mode Fokus Babak 1 (Grid 3 Kolom)** sehingga 57 tim muat rapi dalam 1 layar 1080p tanpa terpotong!
-  - **Saat Babak 1 Selesai:** Tampilan otomatis bertransisi ke **Fase Playoffs (8 Besar)** menuju perebutan gelar juara.
+- **Tampilan OBS Adaptif Otomatis (1 Link Terpusat Tanpa Ganti URL):**
+  - Cukup gunakan 1 link terpusat `http://localhost:3000/overlay/bracket` di OBS Browser Source.
+  - **Tahap 1 (Saat Babak 1 Aktif):** Otomatis menampilkan **Grid 3 Kolom (25 match + box tim unggulan)**. Semua 57 tim muat pas dalam 1 layar 1080p tanpa scrollbar (seperti SS 2).
+  - **Tahap 2 (Saat Masuk Babak 32 Besar & 16 Besar):** Otomatis menampilkan **Grid 2 Kolom Luas** untuk ronde yang sedang aktif sehingga kartu match proporsional, nama sekolah/logo terbaca jelas, dan tidak ada scrollbar.
+  - **Tahap 3 (Saat Masuk Quarterfinals / 8 Besar):** Otomatis bertransisi mulus ke **Bagan Pohon Playoffs (Quarterfinals $\to$ Semifinals $\to$ Grand Finals)** seperti SS 3 hingga penobatan juara.
+  - Tampilan overlay 100% bersih untuk siaran resmi tanpa tombol kontrol klik yang mengganggu di layar OBS.
 - **Fitur Kontrol Bagan:** Acak susunan tim (*Random Shuffle*), finalisasi bagan (*Finalize*), kirim pertandingan ke meja wasit (*Assign to Court*), dan sinkronisasi skor live.
 
 ---
@@ -61,6 +63,10 @@ Sistem penyiaran (*broadcast*), papan skor (*scoreboard*), dan manajemen bagan t
 - **Dashboard Superadmin:** Memantau dan mengendalikan semua meja pertandingan dari 1 layar.
 - **Panel Wasit Spesifik:** Setiap wasit memiliki login sendiri yang otomatis terhubung ke meja tugasnya.
 - **Status Meja Siap (Standby):** Saat pertandingan selesai, meja otomatis dikosongkan dan overlay menampilkan status *"MENUNGGU MATCH BERIKUTNYA • MEJA SIAP"*.
+- **Sistem Anti-Tumpuk Meja (Court Conflict Prevention):**
+  - Meja yang sedang aktif bertanding otomatis berstatus `🔴 (SEDANG AKTIF)` dan **dikunci (disabled) di dropdown bagan** sehingga tidak bisa tertumpuk.
+  - Backend memvalidasi dan menolak keras jika ada penugasan baru ke meja yang sedang aktif bertanding.
+  - **Fitur Tarik dari Meja:** Tombol *"Tarik dari Meja"* pada node bagan berstatus LIVE memungkinkan panitia membatalkan penugasan meja kapan saja dan mengembalikan pertandingan ke status Siap (*Ready*) tanpa merusak data.
 
 ---
 
@@ -117,6 +123,7 @@ Folder proyek sudah dilengkapi file `.bat` siap pakai tanpa perlu menghafal peri
 - **`update-db.bat`**: Menjalankan `npx prisma db push` dan `prisma generate` untuk memperbarui tabel database lokal.
 - **`update-all.bat`**: Menjalankan update skema database, kompilasi frontend, dan kompilasi backend server sekaligus.
 - **`build-hosting.bat`**: Membundel seluruh aplikasi menjadi **`deploy_hosting.zip`** siap upload ke cPanel.
+- **`kill-ports.bat`**: Membersihkan proses Node.js yang tertinggal jika muncul error port bertabrakan (`EADDRINUSE: 3000` atau `5173`).
 
 ---
 

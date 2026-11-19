@@ -27,32 +27,22 @@
 
         <!-- Action Buttons -->
         <div class="flex items-center gap-2">
-          <!-- Copy OBS Link Round 1 (3 Kolom) -->
+          <!-- Copy OBS Link Terpusat Otomatis -->
           <button
-            @click="copyRound1OverlayUrl"
-            class="py-1.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 text-xs font-bold flex items-center gap-1.5 active:scale-95 transition"
-            title="Salin Link OBS Khusus Babak 1 (Grid 3 Kolom - 57 Tim)"
+            @click="copyGlobalOverlayUrl"
+            class="py-1.5 px-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-black text-xs font-black flex items-center gap-1.5 shadow-gold-glow active:scale-95 transition"
+            title="Salin 1 Link OBS Terpusat Otomatis (http://localhost:3000/overlay/bracket) yang otomatis beralih fase"
           >
-            <Swords class="w-3.5 h-3.5" />
-            <span class="hidden sm:inline">Link OBS Babak 1 (3 Kolom)</span>
-          </button>
-
-          <!-- Copy OBS Link Tree -->
-          <button
-            @click="copyBracketOverlayUrl"
-            class="py-1.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs font-bold flex items-center gap-1.5 active:scale-95 transition"
-            title="Salin Link OBS Bagan Pohon Lengkap"
-          >
-            <GitBranch class="w-3.5 h-3.5 text-amber-400" />
-            <span class="hidden sm:inline">Link OBS Pohon</span>
+            <Copy class="w-3.5 h-3.5" />
+            <span>Salin Link OBS Bagan (Otomatis)</span>
           </button>
 
           <!-- New Bracket Button -->
           <button
             @click="showCreateModal = true"
-            class="py-1.5 px-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black text-xs font-black flex items-center gap-1.5 shadow-gold-glow active:scale-95 transition"
+            class="py-1.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold flex items-center gap-1.5 active:scale-95 transition"
           >
-            <Plus class="w-4 h-4" />
+            <Plus class="w-4 h-4 text-amber-400" />
             <span>Buat Bagan Baru</span>
           </button>
         </div>
@@ -264,14 +254,20 @@
                     class="flex-1 px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-xs font-semibold text-white focus:outline-none min-w-0"
                   >
                     <option value="">-- Pilih Meja --</option>
-                    <option v-for="c in matchStore.allMatches" :key="c.matchKey" :value="c.matchKey">
-                      {{ c.courtName }}
+                    <option
+                      v-for="c in matchStore.allMatches"
+                      :key="c.matchKey"
+                      :value="c.matchKey"
+                      :disabled="isCourtBusy(c.matchKey)"
+                      :class="isCourtBusy(c.matchKey) ? 'text-slate-500 bg-slate-900' : 'text-white'"
+                    >
+                      {{ c.courtName }} {{ isCourtBusy(c.matchKey) ? '🔴 (SEDANG AKTIF)' : '🟢 (Tersedia)' }}
                     </option>
                   </select>
 
                   <button
                     @click="handleAssignToCourt(m.id)"
-                    :disabled="!selectedCourt[m.id]"
+                    :disabled="!selectedCourt[m.id] || isCourtBusy(selectedCourt[m.id])"
                     class="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-black text-xs disabled:opacity-30 active:scale-95 transition shrink-0 shadow-sm"
                   >
                     Kirim
@@ -281,15 +277,25 @@
                 <!-- 2. Jika Status LIVE: Sedang tanding di meja tertentu -->
                 <div v-else-if="m.status === 'LIVE'" class="pt-1 space-y-2">
                   <div class="flex items-center justify-between text-xs">
-                    <span class="font-bold text-emerald-400 flex items-center gap-1.5">
-                      <Radio class="w-3.5 h-3.5 animate-pulse text-red-500" />
-                      <span>Live di {{ m.assignedCourt }}</span>
+                    <span class="font-bold text-emerald-400 flex items-center gap-1.5 truncate">
+                      <Radio class="w-3.5 h-3.5 animate-pulse text-red-500 shrink-0" />
+                      <span class="truncate">Live di {{ m.assignedCourt }}</span>
                     </span>
+
+                    <!-- Tombol Batal Kirim / Tarik dari Meja -->
+                    <button
+                      @click="handleUnassignFromCourt(m.id)"
+                      class="px-2 py-0.5 rounded bg-slate-800 hover:bg-red-950/60 text-slate-400 hover:text-red-400 border border-slate-700 hover:border-red-500/50 text-[10px] font-bold flex items-center gap-1 active:scale-95 transition shrink-0"
+                      title="Batalkan penugasan ke meja ini dan kembalikan match ke status Siap (Ready)"
+                    >
+                      <RotateCcw class="w-3 h-3" />
+                      <span>Tarik dari Meja</span>
+                    </button>
                   </div>
 
                   <!-- TOMBOL SELESAIKAN MATCH -->
                   <button
-                    @click="handleFinishMatch(m.courtMatchKey!)"
+                    @click="handleFinishMatch(m.courtMatchKey || '', m.id)"
                     class="w-full py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs uppercase tracking-wider shadow active:scale-95 transition flex items-center justify-center gap-1.5"
                   >
                     <CheckCircle class="w-4 h-4" />
@@ -441,6 +447,7 @@ import {
   X,
   Square,
   Swords,
+  RotateCcw,
 } from "lucide-vue-next";
 
 // Web Audio API Synthesizer for Esports Roulette SFX (Zero-dependency & 0ms latency)
@@ -788,10 +795,39 @@ async function handleAssignToCourt(bracketMatchId: string) {
   }
 }
 
-async function handleFinishMatch(courtMatchKey: string) {
+function isCourtBusy(courtMatchKey: string): boolean {
+  if (!courtMatchKey) return false;
+
+  // 1. Cek apakah ada pertandingan di bagan yang sedang LIVE di meja ini
+  const hasLiveInTournament = tournament.value?.matches.some(
+    (m) => m.status === "LIVE" && m.courtMatchKey === courtMatchKey
+  );
+  if (hasLiveInTournament) return true;
+
+  // 2. Cek apakah status meja di memory/store sedang aktif bertanding (bukan standby)
+  const court = matchStore.allMatches.find((c) => c.matchKey === courtMatchKey);
+  if (court && !court.isWaitingForNext && court.bracketMatchId) {
+    return true;
+  }
+
+  return false;
+}
+
+async function handleUnassignFromCourt(bracketMatchId: string) {
+  if (!confirm("Tarik pertandingan ini kembali dari meja? Status match akan kembali menjadi Siap (Ready) dan meja akan kembali tersedia.")) return;
+  try {
+    const res = await bracketStore.unassignMatchFromCourt(bracketMatchId);
+    toastMessage.value = res.message || "Pertandingan berhasil ditarik dari meja!";
+    setTimeout(() => (toastMessage.value = ""), 3000);
+  } catch (err: any) {
+    alert(err.message || "Gagal menarik pertandingan dari meja.");
+  }
+}
+
+async function handleFinishMatch(courtMatchKey: string, bracketMatchId?: string) {
   if (!confirm("Selesaikan pertandingan ini? Pemenang akan otomatis maju di bagan, dan meja akan otomatis dikosongkan ke status menunggu.")) return;
   try {
-    const res = await bracketStore.finishMatch(courtMatchKey);
+    const res = await bracketStore.finishMatch(courtMatchKey, bracketMatchId);
     toastMessage.value = res.message || "Pertandingan selesai!";
     setTimeout(() => (toastMessage.value = ""), 3000);
   } catch (err: any) {
@@ -799,17 +835,10 @@ async function handleFinishMatch(courtMatchKey: string) {
   }
 }
 
-function copyBracketOverlayUrl() {
-  const url = `${window.location.origin}/overlay/bracket?view=tree`;
+function copyGlobalOverlayUrl() {
+  const url = `${window.location.origin}/overlay/bracket`;
   navigator.clipboard.writeText(url);
-  toastMessage.value = "Link OBS Bagan Pohon berhasil disalin!";
-  setTimeout(() => (toastMessage.value = ""), 2500);
-}
-
-function copyRound1OverlayUrl() {
-  const url = `${window.location.origin}/overlay/bracket?view=round1`;
-  navigator.clipboard.writeText(url);
-  toastMessage.value = "Link OBS Babak 1 (3 Kolom) berhasil disalin!";
+  toastMessage.value = "Link OBS Bagan Terpusat (http://.../overlay/bracket) berhasil disalin!";
   setTimeout(() => (toastMessage.value = ""), 2500);
 }
 </script>

@@ -637,6 +637,35 @@ class BracketService {
     const court = matchState.getMatchByKey(courtMatchKey);
     if (!court) throw new Error("Meja/Court pertandingan tidak ditemukan.");
 
+    // VALIDASI KETAT ANTI-TUMPUK / BUSY CHECK:
+    // 1. Cek apakah di database sudah ada pertandingan lain yang sedang LIVE di meja ini
+    const activeMatchOnCourt = await prisma.bracketMatch.findFirst({
+      where: {
+        courtMatchKey,
+        status: "LIVE",
+        id: { not: bracketMatchId },
+      },
+    });
+
+    if (activeMatchOnCourt) {
+      const matchLabel = `${activeMatchOnCourt.teamAName || 'TBD'} vs ${activeMatchOnCourt.teamBName || 'TBD'}`;
+      throw new Error(
+        `${court.courtName} saat ini sedang aktif bertanding (${matchLabel}). Selesaikan atau tarik pertandingan tersebut terlebih dahulu sebelum menugaskan pertandingan baru.`
+      );
+    }
+
+    // 2. Cek apakah meja di memory sedang aktif (bukan status standby/menunggu)
+    if (!court.isWaitingForNext && court.bracketMatchId && court.bracketMatchId !== bracketMatchId) {
+      throw new Error(
+        `${court.courtName} saat ini sedang aktif digunakan. Selesaikan pertandingan atau kosongkan meja tersebut terlebih dahulu.`
+      );
+    }
+
+    // Jika match ini sebelumnya ditugaskan ke meja lain, kosongkan meja sebelumnya
+    if (bracketMatch.status === "LIVE" && bracketMatch.courtMatchKey && bracketMatch.courtMatchKey !== courtMatchKey) {
+      matchState.setCourtWaitingState(bracketMatch.courtMatchKey, true);
+    }
+
     const matchFormat = (format || bracketMatch.tournament.format || "BO3") as "BO1" | "BO3" | "BO5" | "BO7";
 
     // Update Court live state
@@ -690,6 +719,45 @@ class BracketService {
     return { bracketMatch, court: matchState.getMatchByKey(courtMatchKey) };
   }
 
+  // 4b. Batal Kirim ke Meja (Unassign / Tarik Match Kembali ke READY)
+  public async unassignMatchFromCourt(bracketMatchId: string) {
+    const bracketMatch = await prisma.bracketMatch.findUnique({
+      where: { id: bracketMatchId },
+    });
+
+    if (!bracketMatch) throw new Error("Pertandingan braket tidak ditemukan.");
+
+    const courtKey = bracketMatch.courtMatchKey;
+
+    // Kembalikan status match ke READY
+    await prisma.bracketMatch.update({
+      where: { id: bracketMatchId },
+      data: {
+        status: "READY",
+        assignedCourt: null,
+        courtMatchKey: null,
+      },
+    });
+
+    // Jika meja tersebut di memori sedang memuat match ini, kosongkan meja ke standby
+    if (courtKey) {
+      const court = matchState.getMatchByKey(courtKey);
+      if (court && court.bracketMatchId === bracketMatchId) {
+        matchState.setCourtWaitingState(courtKey, true);
+      }
+    }
+
+    if (bracketMatch.tournamentId) {
+      await this.syncAllCourtsWithBracket(bracketMatch.tournamentId);
+      this.broadcastBracket(bracketMatch.tournamentId);
+    }
+
+    return {
+      success: true,
+      message: `Pertandingan "${bracketMatch.teamAName} vs ${bracketMatch.teamBName}" berhasil ditarik dari meja. Meja kini kembali tersedia.`,
+    };
+  }
+
   // Sync live score from Court to Bracket node
   public async syncLiveScoreFromCourt(courtMatchKey: string) {
     const court = matchState.getMatchByKey(courtMatchKey);
@@ -706,22 +774,35 @@ class BracketService {
   }
 
   // 5. Finish Match (Selesaikan Pertandingan & Majukan Pemenang di Bagan)
-  public async finishMatch(courtMatchKey: string) {
-    const court = matchState.getMatchByKey(courtMatchKey);
-    if (!court) throw new Error("Meja pertandingan tidak ditemukan.");
-    if (!court.bracketMatchId) {
-      throw new Error("Pertandingan di meja ini tidak terhubung ke braket turnamen.");
+  public async finishMatch(courtMatchKey?: string, bracketMatchId?: string) {
+    let targetMatchId = bracketMatchId;
+
+    if (!targetMatchId && courtMatchKey) {
+      const court = matchState.getMatchByKey(courtMatchKey);
+      targetMatchId = court?.bracketMatchId || undefined;
+    }
+
+    if (!targetMatchId) {
+      throw new Error("ID pertandingan atau meja tidak ditemukan.");
     }
 
     const bracketMatch = await prisma.bracketMatch.findUnique({
-      where: { id: court.bracketMatchId },
+      where: { id: targetMatchId },
       include: { teamA: true, teamB: true },
     });
     if (!bracketMatch) throw new Error("Node braket tidak ditemukan.");
 
-    // Determine winner based on court score
-    const scoreA = court.teamA.score;
-    const scoreB = court.teamB.score;
+    // Tentukan meja terkait
+    const courtKey = bracketMatch.courtMatchKey || courtMatchKey;
+    const court = courtKey ? matchState.getMatchByKey(courtKey) : null;
+
+    let scoreA = bracketMatch.scoreA;
+    let scoreB = bracketMatch.scoreB;
+
+    if (court && court.bracketMatchId === bracketMatch.id) {
+      scoreA = court.teamA.score;
+      scoreB = court.teamB.score;
+    }
 
     if (scoreA === scoreB) {
       throw new Error("Skor masih seri! Pertandingan harus memiliki pemenang sebelum diselesaikan.");
@@ -756,16 +837,20 @@ class BracketService {
     }
 
     // 4. OTOMATIS KOSONGKAN MEJA & GANTI OVERLAY KE STATUS MENUNGGU MATCH BERIKUTNYA
-    court.isWaitingForNext = true;
-    court.teamA.score = 0;
-    court.teamB.score = 0;
-    court.isCompleted = false;
-    court.winnerTeam = null;
-    court.matchPointTeam = null;
-    court.bracketMatchId = undefined;
+    if (court && court.bracketMatchId === bracketMatch.id) {
+      court.isWaitingForNext = true;
+      court.teamA.score = 0;
+      court.teamB.score = 0;
+      court.isCompleted = false;
+      court.winnerTeam = null;
+      court.matchPointTeam = null;
+      court.bracketMatchId = undefined;
 
-    matchState.broadcast(courtMatchKey);
-    await matchState.schedulePersistence(courtMatchKey);
+      if (courtKey) {
+        matchState.broadcast(courtKey);
+        await matchState.schedulePersistence(courtKey);
+      }
+    }
 
     await this.syncAllCourtsWithBracket(bracketMatch.tournamentId);
     this.broadcastBracket(bracketMatch.tournamentId);
@@ -773,8 +858,8 @@ class BracketService {
     return {
       success: true,
       winner: winnerTeamObj?.name,
-      courtName: court.courtName,
-      message: `Pertandingan selesai! ${winnerTeamObj?.name} lolos ke babak berikutnya. ${court.courtName} otomatis di-reset ke status menunggu.`,
+      courtName: court?.courtName || bracketMatch.assignedCourt,
+      message: `Pertandingan selesai! ${winnerTeamObj?.name} lolos ke babak berikutnya. Meja otomatis di-reset ke status menunggu.`,
     };
   }
 
