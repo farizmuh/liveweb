@@ -68,7 +68,7 @@
         >
           <option value="">-- Pilih dari Database Tim --</option>
           <option v-for="t in teamStore.teams" :key="t.id" :value="t.id">
-            [{{ t.shortName }}] {{ t.name }}
+            [{{ t.shortName }}] {{ t.name }}{{ t.institution ? ' - ' + t.institution : '' }}
           </option>
         </select>
 
@@ -107,7 +107,7 @@
         >
           <option value="">-- Pilih dari Database Tim --</option>
           <option v-for="t in teamStore.teams" :key="t.id" :value="t.id">
-            [{{ t.shortName }}] {{ t.name }}
+            [{{ t.shortName }}] {{ t.name }}{{ t.institution ? ' - ' + t.institution : '' }}
           </option>
         </select>
 
@@ -152,10 +152,12 @@ const format = ref(matchStore.match?.format || "BO3");
 const teamAName = ref(matchStore.match?.teamA?.name || "");
 const teamAShort = ref(matchStore.match?.teamA?.shortName || "");
 const teamALogo = ref<string | null | undefined>(matchStore.match?.teamA?.logoUrl);
+const teamAInstitution = ref<string | null | undefined>(matchStore.match?.teamA?.institution);
 
 const teamBName = ref(matchStore.match?.teamB?.name || "");
 const teamBShort = ref(matchStore.match?.teamB?.shortName || "");
 const teamBLogo = ref<string | null | undefined>(matchStore.match?.teamB?.logoUrl);
+const teamBInstitution = ref<string | null | undefined>(matchStore.match?.teamB?.institution);
 
 watch(
   () => matchStore.match,
@@ -167,9 +169,11 @@ watch(
     teamAName.value = m.teamA?.name || "";
     teamAShort.value = m.teamA?.shortName || "";
     teamALogo.value = m.teamA?.logoUrl || "";
+    teamAInstitution.value = m.teamA?.institution || "";
     teamBName.value = m.teamB?.name || "";
     teamBShort.value = m.teamB?.shortName || "";
     teamBLogo.value = m.teamB?.logoUrl || "";
+    teamBInstitution.value = m.teamB?.institution || "";
   },
   { deep: true, immediate: true }
 );
@@ -190,6 +194,7 @@ function onSelectPresetA(e: Event) {
     teamAName.value = team.name;
     teamAShort.value = team.shortName;
     teamALogo.value = team.logoUrl;
+    teamAInstitution.value = team.institution || null;
     updateConfig();
   }
 }
@@ -201,6 +206,7 @@ function onSelectPresetB(e: Event) {
     teamBName.value = team.name;
     teamBShort.value = team.shortName;
     teamBLogo.value = team.logoUrl;
+    teamBInstitution.value = team.institution || null;
     updateConfig();
   }
 }
@@ -214,11 +220,13 @@ function updateConfig() {
       name: teamAName.value,
       shortName: teamAShort.value,
       logoUrl: teamALogo.value,
+      institution: teamAInstitution.value,
     },
     teamB: {
       name: teamBName.value,
       shortName: teamBShort.value,
       logoUrl: teamBLogo.value,
+      institution: teamBInstitution.value,
     },
   });
 }

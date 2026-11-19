@@ -134,9 +134,14 @@
               <div class="flex items-center justify-between py-0.5 text-xs">
                 <div class="flex items-center gap-1.5 overflow-hidden">
                   <span class="w-4 text-[9px] font-black text-amber-400 shrink-0">{{ m.teamAShort?.slice(0, 3) || '?' }}</span>
-                  <span class="font-bold text-white truncate max-w-[155px]" :class="m.winnerTeam === 'A' ? 'text-amber-300 font-black' : ''">
-                    {{ m.teamAName || 'TBD' }}
-                  </span>
+                  <div class="truncate max-w-[155px]">
+                    <span class="font-bold text-white truncate block leading-tight" :class="m.winnerTeam === 'A' ? 'text-amber-300 font-black' : ''">
+                      {{ m.teamAName || 'TBD' }}
+                    </span>
+                    <span v-if="m.teamA?.institution || m.teamAInstitution" class="text-[8px] text-cyan-300 font-medium truncate block leading-none">
+                      {{ m.teamA?.institution || m.teamAInstitution }}
+                    </span>
+                  </div>
                 </div>
                 <span class="font-display font-black text-xs" :class="m.winnerTeam === 'A' ? 'text-amber-300' : 'text-slate-400'">
                   {{ m.scoreA }}
@@ -147,9 +152,14 @@
               <div class="flex items-center justify-between py-0.5 text-xs border-t border-slate-900">
                 <div class="flex items-center gap-1.5 overflow-hidden">
                   <span class="w-4 text-[9px] font-black text-amber-400 shrink-0">{{ m.teamBShort?.slice(0, 3) || '?' }}</span>
-                  <span class="font-bold text-white truncate max-w-[155px]" :class="m.winnerTeam === 'B' ? 'text-amber-300 font-black' : ''">
-                    {{ m.teamBName || 'TBD' }}
-                  </span>
+                  <div class="truncate max-w-[155px]">
+                    <span class="font-bold text-white truncate block leading-tight" :class="m.winnerTeam === 'B' ? 'text-amber-300 font-black' : ''">
+                      {{ m.teamBName || 'TBD' }}
+                    </span>
+                    <span v-if="m.teamB?.institution || m.teamBInstitution" class="text-[8px] text-cyan-300 font-medium truncate block leading-none">
+                      {{ m.teamB?.institution || m.teamBInstitution }}
+                    </span>
+                  </div>
                 </div>
                 <span class="font-display font-black text-xs" :class="m.winnerTeam === 'B' ? 'text-amber-300' : 'text-slate-400'">
                   {{ m.scoreB }}
@@ -180,9 +190,14 @@
               <div class="flex items-center justify-between py-0.5 text-xs">
                 <div class="flex items-center gap-1.5 overflow-hidden">
                   <span class="w-4 text-[9px] font-black text-amber-400 shrink-0">{{ m.teamAShort?.slice(0, 3) || '?' }}</span>
-                  <span class="font-bold text-white truncate max-w-[155px]" :class="m.winnerTeam === 'A' ? 'text-amber-300 font-black' : ''">
-                    {{ m.teamAName || 'TBD' }}
-                  </span>
+                  <div class="truncate max-w-[155px]">
+                    <span class="font-bold text-white truncate block leading-tight" :class="m.winnerTeam === 'A' ? 'text-amber-300 font-black' : ''">
+                      {{ m.teamAName || 'TBD' }}
+                    </span>
+                    <span v-if="m.teamA?.institution || m.teamAInstitution" class="text-[8px] text-cyan-300 font-medium truncate block leading-none">
+                      {{ m.teamA?.institution || m.teamAInstitution }}
+                    </span>
+                  </div>
                 </div>
                 <span class="font-display font-black text-xs" :class="m.winnerTeam === 'A' ? 'text-amber-300' : 'text-slate-400'">
                   {{ m.scoreA }}
@@ -193,9 +208,14 @@
               <div class="flex items-center justify-between py-0.5 text-xs border-t border-slate-900">
                 <div class="flex items-center gap-1.5 overflow-hidden">
                   <span class="w-4 text-[9px] font-black text-amber-400 shrink-0">{{ m.teamBShort?.slice(0, 3) || '?' }}</span>
-                  <span class="font-bold text-white truncate max-w-[155px]" :class="m.winnerTeam === 'B' ? 'text-amber-300 font-black' : ''">
-                    {{ m.teamBName || 'TBD' }}
-                  </span>
+                  <div class="truncate max-w-[155px]">
+                    <span class="font-bold text-white truncate block leading-tight" :class="m.winnerTeam === 'B' ? 'text-amber-300 font-black' : ''">
+                      {{ m.teamBName || 'TBD' }}
+                    </span>
+                    <span v-if="m.teamB?.institution || m.teamBInstitution" class="text-[8px] text-cyan-300 font-medium truncate block leading-none">
+                      {{ m.teamB?.institution || m.teamBInstitution }}
+                    </span>
+                  </div>
                 </div>
                 <span class="font-display font-black text-xs" :class="m.winnerTeam === 'B' ? 'text-amber-300' : 'text-slate-400'">
                   {{ m.scoreB }}
@@ -226,9 +246,14 @@
               <div class="flex items-center justify-between py-0.5 text-xs">
                 <div class="flex items-center gap-1.5 overflow-hidden">
                   <span class="w-4 text-[9px] font-black text-amber-400 shrink-0">{{ m.teamAShort?.slice(0, 3) || '?' }}</span>
-                  <span class="font-bold text-white truncate max-w-[155px]" :class="m.winnerTeam === 'A' ? 'text-amber-300 font-black' : ''">
-                    {{ m.teamAName || 'TBD' }}
-                  </span>
+                  <div class="truncate max-w-[155px]">
+                    <span class="font-bold text-white truncate block leading-tight" :class="m.winnerTeam === 'A' ? 'text-amber-300 font-black' : ''">
+                      {{ m.teamAName || 'TBD' }}
+                    </span>
+                    <span v-if="m.teamA?.institution || m.teamAInstitution" class="text-[8px] text-cyan-300 font-medium truncate block leading-none">
+                      {{ m.teamA?.institution || m.teamAInstitution }}
+                    </span>
+                  </div>
                 </div>
                 <span class="font-display font-black text-xs" :class="m.winnerTeam === 'A' ? 'text-amber-300' : 'text-slate-400'">
                   {{ m.scoreA }}
@@ -239,9 +264,14 @@
               <div class="flex items-center justify-between py-0.5 text-xs border-t border-slate-900">
                 <div class="flex items-center gap-1.5 overflow-hidden">
                   <span class="w-4 text-[9px] font-black text-amber-400 shrink-0">{{ m.teamBShort?.slice(0, 3) || '?' }}</span>
-                  <span class="font-bold text-white truncate max-w-[155px]" :class="m.winnerTeam === 'B' ? 'text-amber-300 font-black' : ''">
-                    {{ m.teamBName || 'TBD' }}
-                  </span>
+                  <div class="truncate max-w-[155px]">
+                    <span class="font-bold text-white truncate block leading-tight" :class="m.winnerTeam === 'B' ? 'text-amber-300 font-black' : ''">
+                      {{ m.teamBName || 'TBD' }}
+                    </span>
+                    <span v-if="m.teamB?.institution || m.teamBInstitution" class="text-[8px] text-cyan-300 font-medium truncate block leading-none">
+                      {{ m.teamB?.institution || m.teamBInstitution }}
+                    </span>
+                  </div>
                 </div>
                 <span class="font-display font-black text-xs" :class="m.winnerTeam === 'B' ? 'text-amber-300' : 'text-slate-400'">
                   {{ m.scoreB }}
@@ -272,7 +302,10 @@
                   <div class="w-4 h-4 rounded bg-black flex items-center justify-center shrink-0 border border-slate-700">
                     <span class="text-[7px] font-black text-amber-400">{{ t.shortName?.slice(0, 3) || '?' }}</span>
                   </div>
-                  <span class="font-bold text-slate-200 truncate">{{ t.name }}</span>
+                  <div class="min-w-0">
+                    <span class="font-bold text-slate-200 truncate block leading-tight">{{ t.name }}</span>
+                    <span v-if="t.institution" class="text-[8px] text-cyan-400 font-medium truncate block leading-none">{{ t.institution }}</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -451,9 +484,14 @@
                     <img v-if="m.teamALogo" :src="m.teamALogo" class="w-full h-full object-contain" />
                     <span v-else class="text-[10px] font-bold text-amber-400">{{ m.teamAShort?.slice(0, 3) || '?' }}</span>
                   </div>
-                  <span class="text-sm font-black uppercase text-white truncate max-w-[150px]">
-                    {{ m.teamAName || (m.isBye ? 'BYE' : 'TBD') }}
-                  </span>
+                  <div class="truncate max-w-[150px]">
+                    <span class="text-sm font-black uppercase text-white truncate block leading-tight">
+                      {{ m.teamAName || (m.isBye ? 'BYE' : 'TBD') }}
+                    </span>
+                    <span v-if="m.teamA?.institution || m.teamAInstitution" class="text-[9px] text-cyan-300 font-semibold truncate block leading-none">
+                      {{ m.teamA?.institution || m.teamAInstitution }}
+                    </span>
+                  </div>
                 </div>
                 <div
                   class="w-7 text-center font-display text-xl font-black text-white"
@@ -476,9 +514,14 @@
                     <img v-if="m.teamBLogo" :src="m.teamBLogo" class="w-full h-full object-contain" />
                     <span v-else class="text-[10px] font-bold text-amber-400">{{ m.teamBShort?.slice(0, 3) || '?' }}</span>
                   </div>
-                  <span class="text-sm font-black uppercase text-white truncate max-w-[150px]">
-                    {{ m.teamBName || (m.isBye ? 'BYE' : 'TBD') }}
-                  </span>
+                  <div class="truncate max-w-[150px]">
+                    <span class="text-sm font-black uppercase text-white truncate block leading-tight">
+                      {{ m.teamBName || (m.isBye ? 'BYE' : 'TBD') }}
+                    </span>
+                    <span v-if="m.teamB?.institution || m.teamBInstitution" class="text-[9px] text-cyan-300 font-semibold truncate block leading-none">
+                      {{ m.teamB?.institution || m.teamBInstitution }}
+                    </span>
+                  </div>
                 </div>
                 <div
                   class="w-7 text-center font-display text-xl font-black text-white"
@@ -590,19 +633,29 @@ const round1Col3 = computed(() => {
 const byeTeamsInR32 = computed(() => {
   if (!tournament.value?.matches) return [];
   const r2Matches = tournament.value.matches.filter((m) => m.round === 2);
-  const byes: { id: string; name: string; shortName: string }[] = [];
+  const byes: { id: string; name: string; shortName: string; institution?: string | null }[] = [];
 
   for (const m of r2Matches) {
     if (m.teamAId && m.teamAName) {
       const isFromR1 = round1Matches.value.some((r1) => r1.nextMatchId === m.id && r1.nextMatchSlot === "A");
       if (!isFromR1) {
-        byes.push({ id: m.teamAId, name: m.teamAName, shortName: m.teamAShort || "" });
+        byes.push({
+          id: m.teamAId,
+          name: m.teamAName,
+          shortName: m.teamAShort || "",
+          institution: m.teamA?.institution || m.teamAInstitution || null,
+        });
       }
     }
     if (m.teamBId && m.teamBName) {
       const isFromR1 = round1Matches.value.some((r1) => r1.nextMatchId === m.id && r1.nextMatchSlot === "B");
       if (!isFromR1) {
-        byes.push({ id: m.teamBId, name: m.teamBName, shortName: m.teamBShort || "" });
+        byes.push({
+          id: m.teamBId,
+          name: m.teamBName,
+          shortName: m.teamBShort || "",
+          institution: m.teamB?.institution || m.teamBInstitution || null,
+        });
       }
     }
   }

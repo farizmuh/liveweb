@@ -9,6 +9,7 @@ export interface BracketTeam {
   shortName?: string | null;
   logoUrl?: string | null;
   colorHex?: string | null;
+  institution?: string | null;
 }
 
 export interface BracketMatchNode {
@@ -23,12 +24,14 @@ export interface BracketMatchNode {
   teamAName?: string | null;
   teamAShort?: string | null;
   teamALogo?: string | null;
+  teamAInstitution?: string | null;
   scoreA: number;
   teamBId?: string | null;
   teamB?: BracketTeam | null;
   teamBName?: string | null;
   teamBShort?: string | null;
   teamBLogo?: string | null;
+  teamBInstitution?: string | null;
   scoreB: number;
   isBye: boolean;
   winnerTeam?: string | null;

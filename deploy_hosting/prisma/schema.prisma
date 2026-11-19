@@ -57,13 +57,14 @@ model User {
 }
 
 model Team {
-  id        String   @id @default(uuid())
-  name      String   @unique
-  shortName String
-  logoUrl   String?
-  colorHex  String?  @default("#2563eb")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(uuid())
+  name        String   @unique
+  shortName   String
+  logoUrl     String?
+  colorHex    String?  @default("#2563eb")
+  institution String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   matchesAsA        Match[]        @relation("TeamA")
   matchesAsB        Match[]        @relation("TeamB")
@@ -96,6 +97,7 @@ model BracketMatch {
   teamAName      String?
   teamAShort     String?
   teamALogo      String?
+  teamAInstitution String?
   scoreA         Int             @default(0)
 
   teamBId        String?
@@ -103,6 +105,7 @@ model BracketMatch {
   teamBName      String?
   teamBShort     String?
   teamBLogo      String?
+  teamBInstitution String?
   scoreB         Int             @default(0)
 
   isBye          Boolean         @default(false)
@@ -137,6 +140,7 @@ model Match {
   teamAName          String    @default("BLUE TEAM")
   teamAShort         String    @default("BLUE")
   teamALogo          String?
+  teamAInstitution   String?
   scoreA             Int       @default(0)
 
   teamBId            String?
@@ -144,6 +148,7 @@ model Match {
   teamBName          String    @default("RED TEAM")
   teamBShort         String    @default("RED")
   teamBLogo          String?
+  teamBInstitution   String?
   scoreB             Int       @default(0)
 
   assignedRefereeId  String?

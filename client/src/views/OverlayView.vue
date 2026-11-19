@@ -92,6 +92,13 @@
               >
                 {{ match.teamA.name }}
               </h2>
+              <p
+                v-if="match.teamA.institution"
+                class="font-bold text-amber-300 uppercase font-sans truncate drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] max-w-full leading-none mt-0.5"
+                :class="getInstitutionClass(match.teamA.institution)"
+              >
+                {{ match.teamA.institution }}
+              </p>
             </div>
           </div>
 
@@ -144,6 +151,13 @@
               >
                 {{ match.teamB.name }}
               </h2>
+              <p
+                v-if="match.teamB.institution"
+                class="font-bold text-amber-300 uppercase font-sans truncate text-right drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] max-w-full leading-none mt-0.5"
+                :class="getInstitutionClass(match.teamB.institution)"
+              >
+                {{ match.teamB.institution }}
+              </p>
             </div>
 
             <div class="w-13 h-13 shrink-0 rounded-xl p-1 bg-black/60 border-2 border-red-400/80 logo-ring-red flex items-center justify-center shadow-lg transition-transform hover:scale-105">
@@ -239,6 +253,14 @@ function getTeamNameClass(name?: string) {
   if (len >= 13) return "text-base md:text-lg tracking-normal";
   if (len >= 9) return "text-lg md:text-xl tracking-wide";
   return "text-xl md:text-2xl tracking-wider";
+}
+
+function getInstitutionClass(inst?: string | null) {
+  if (!inst) return "text-[10px]";
+  const len = inst.length;
+  if (len >= 26) return "text-[8px] md:text-[9px] tracking-tight leading-none";
+  if (len >= 18) return "text-[9px] md:text-[10px] tracking-normal leading-tight";
+  return "text-[10px] md:text-[11px] tracking-wide leading-tight";
 }
 
 function initOverlayKey() {

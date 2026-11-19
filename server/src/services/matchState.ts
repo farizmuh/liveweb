@@ -15,6 +15,7 @@ export interface ActiveMatchState {
     shortName: string;
     logoUrl?: string | null;
     colorHex?: string | null;
+    institution?: string | null;
     score: number;
   };
   teamB: {
@@ -23,6 +24,7 @@ export interface ActiveMatchState {
     shortName: string;
     logoUrl?: string | null;
     colorHex?: string | null;
+    institution?: string | null;
     score: number;
   };
   assignedRefereeId?: string | null;
@@ -141,6 +143,10 @@ class MatchStateManager {
         orderBy: { courtName: "asc" },
       });
 
+      // Load all teams to resolve institution/details by name if direct relation was unset
+      const allTeams = await prisma.team.findMany();
+      const teamMapByName = new Map(allTeams.map((t) => [t.name.trim().toUpperCase(), t]));
+
       if (dbMatches.length === 0) {
         // Fallback default match if empty
         const defaultKey = "match-" + crypto.randomBytes(3).toString("hex");
@@ -163,6 +169,9 @@ class MatchStateManager {
       }
 
       for (const m of dbMatches) {
+        const matchedA = (m.teamAId ? allTeams.find((t) => t.id === m.teamAId) : null) || teamMapByName.get(m.teamAName.trim().toUpperCase());
+        const matchedB = (m.teamBId ? allTeams.find((t) => t.id === m.teamBId) : null) || teamMapByName.get(m.teamBName.trim().toUpperCase());
+
         const state: ActiveMatchState = {
           id: m.id,
           matchKey: m.matchKey,
@@ -171,19 +180,21 @@ class MatchStateManager {
           roundName: m.roundName,
           format: m.format as any,
           teamA: {
-            id: m.teamAId,
+            id: m.teamAId || matchedA?.id || null,
             name: m.teamAName,
-            shortName: m.teamAShort,
-            logoUrl: m.teamALogo || m.teamA?.logoUrl,
-            colorHex: m.teamA?.colorHex || "#2563eb",
+            shortName: m.teamAShort || matchedA?.shortName || "A",
+            logoUrl: m.teamALogo || matchedA?.logoUrl || null,
+            colorHex: matchedA?.colorHex || "#2563eb",
+            institution: m.teamAInstitution || matchedA?.institution || null,
             score: m.scoreA,
           },
           teamB: {
-            id: m.teamBId,
+            id: m.teamBId || matchedB?.id || null,
             name: m.teamBName,
-            shortName: m.teamBShort,
-            logoUrl: m.teamBLogo || m.teamB?.logoUrl,
-            colorHex: m.teamB?.colorHex || "#dc2626",
+            shortName: m.teamBShort || matchedB?.shortName || "B",
+            logoUrl: m.teamBLogo || matchedB?.logoUrl || null,
+            colorHex: matchedB?.colorHex || "#dc2626",
+            institution: m.teamBInstitution || matchedB?.institution || null,
             score: m.scoreB,
           },
           assignedRefereeId: m.assignedRefereeId,
@@ -268,11 +279,13 @@ class MatchStateManager {
             teamAName: match.teamA.name,
             teamAShort: match.teamA.shortName,
             teamALogo: match.teamA.logoUrl,
+            teamAInstitution: match.teamA.institution || null,
             scoreA: match.teamA.score,
             teamBId: match.teamB.id,
             teamBName: match.teamB.name,
             teamBShort: match.teamB.shortName,
             teamBLogo: match.teamB.logoUrl,
+            teamBInstitution: match.teamB.institution || null,
             scoreB: match.teamB.score,
             isCompleted: match.isCompleted,
             isWaitingForNext: match.isWaitingForNext ?? false,

@@ -13,6 +13,7 @@ export interface BracketNodeData {
     name?: string | null;
     shortName?: string | null;
     logoUrl?: string | null;
+    institution?: string | null;
     score: number;
   };
   teamB?: {
@@ -20,6 +21,7 @@ export interface BracketNodeData {
     name?: string | null;
     shortName?: string | null;
     logoUrl?: string | null;
+    institution?: string | null;
     score: number;
   };
   isBye: boolean;
@@ -493,11 +495,13 @@ class BracketService {
       updateData.teamAName = team.name;
       updateData.teamAShort = team.shortName;
       updateData.teamALogo = team.logoUrl;
+      updateData.teamAInstitution = team.institution || null;
     } else {
       updateData.teamBId = team.id;
       updateData.teamBName = team.name;
       updateData.teamBShort = team.shortName;
       updateData.teamBLogo = team.logoUrl;
+      updateData.teamBInstitution = team.institution || null;
     }
 
     // Check if both teams are present to mark READY
@@ -622,7 +626,7 @@ class BracketService {
   ) {
     const bracketMatch = await prisma.bracketMatch.findUnique({
       where: { id: bracketMatchId },
-      include: { tournament: true },
+      include: { tournament: true, teamA: true, teamB: true },
     });
 
     if (!bracketMatch) throw new Error("Pertandingan braket tidak ditemukan.");
@@ -645,12 +649,14 @@ class BracketService {
         name: bracketMatch.teamAName || "TEAM A",
         shortName: bracketMatch.teamAShort || "A",
         logoUrl: bracketMatch.teamALogo,
+        institution: bracketMatch.teamAInstitution || bracketMatch.teamA?.institution || null,
       },
       teamB: {
         id: bracketMatch.teamBId,
         name: bracketMatch.teamBName || "TEAM B",
         shortName: bracketMatch.teamBShort || "B",
         logoUrl: bracketMatch.teamBLogo,
+        institution: bracketMatch.teamBInstitution || bracketMatch.teamB?.institution || null,
       },
     });
 

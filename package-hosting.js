@@ -98,11 +98,21 @@ const prodPkg = {
 };
 fs.writeFileSync(path.resolve(outDir, "package.json"), JSON.stringify(prodPkg, null, 2));
 
-// Buat template .env produksi
+// Buat template .env produksi (gunakan .env.example agar tidak menimpa .env yang sudah ada di server)
 fs.writeFileSync(
-  path.resolve(outDir, ".env"),
+  path.resolve(outDir, ".env.example"),
   `PORT=3000\nNODE_ENV=production\nDATABASE_URL="mysql://USER_DB:PASSWORD_DB@localhost:3306/NAMA_DB?connection_limit=3"\nJWT_SECRET="kunci-rahasia-esports-${Date.now()}"\nCORS_ORIGIN="*"\n`
 );
+
+// Buat script update SQL untuk phpMyAdmin hosting
+const updateSql = `-- JALANKAN DI PHPMYADMIN (TAB SQL) DATABASE HOSTING ANDA:
+ALTER TABLE \`Team\` ADD COLUMN IF NOT EXISTS \`institution\` VARCHAR(191) NULL;
+ALTER TABLE \`Match\` ADD COLUMN IF NOT EXISTS \`teamAInstitution\` VARCHAR(191) NULL;
+ALTER TABLE \`Match\` ADD COLUMN IF NOT EXISTS \`teamBInstitution\` VARCHAR(191) NULL;
+ALTER TABLE \`BracketMatch\` ADD COLUMN IF NOT EXISTS \`teamAInstitution\` VARCHAR(191) NULL;
+ALTER TABLE \`BracketMatch\` ADD COLUMN IF NOT EXISTS \`teamBInstitution\` VARCHAR(191) NULL;
+`;
+fs.writeFileSync(path.resolve(outDir, "update_schema.sql"), updateSql);
 
 // Buat file .htaccess yang efektif untuk LiteSpeed + Passenger di cPanel
 const htaccessContent = `# DO NOT REMOVE. CLOUDLINUX PASSENGER CONFIGURATION BEGIN

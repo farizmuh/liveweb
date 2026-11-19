@@ -66,6 +66,7 @@ app.get("/api/auth/me", requireAuth, authController.getProfile);
 // Team Routes
 app.get("/api/teams", teamController.listTeams);
 app.post("/api/teams", requireAuth, upload.single("logo"), teamController.createTeam);
+app.post("/api/teams/bulk", requireAuth, teamController.bulkCreateTeams);
 app.put("/api/teams/:id", requireAuth, upload.single("logo"), teamController.updateTeam);
 app.delete("/api/teams/:id", requireAuth, teamController.deleteTeam);
 

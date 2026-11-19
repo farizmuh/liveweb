@@ -9,6 +9,7 @@ export interface TeamData {
   shortName: string;
   logoUrl?: string | null;
   colorHex?: string | null;
+  institution?: string | null;
   score: number;
 }
 
