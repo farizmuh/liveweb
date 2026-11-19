@@ -1,220 +1,178 @@
-# Esports Real-Time Scoreboard & OBS Overlay (MLBB Style)
+# 🎮 Esports Real-Time Scoreboard, Tournament Bracket & OBS Overlay (MLBB Style)
 
-Sistem scoreboard dan overlay broadcast turnamen esports profesional bernuansa Mobile Legends: Bang Bang (MLBB), dilengkapi sinkronisasi real-time berlatensi ultra-rendah (<10ms) via Socket.io, in-memory state caching, dan persistensi asinkron ke MySQL via Prisma ORM.
-
----
-
-## 🎮 Fitur Utama
-
-### 1. Backend & Real-Time Sync (Express.js + Socket.io + Prisma MySQL)
-- **In-Memory Caching:** Saat server berjalan, pertandingan dengan `is_active = TRUE` dimuat langsung ke memori.
-- **Sub-Millisecond Broadcast:** Setiap kali ada interaksi wasit (klik skor `+1`, swap tim, ganti format), data langsung di-emit via Socket.io ke OBS dalam hitungan milidetik.
-- **Asynchronous Persistence:** Perubahan ditulis ke MySQL di latar belakang tanpa memblokir socket.
-- **Crash & Restart Resilience:** Jika VPS mati lampu atau di-restart, state pertandingan terakhir tidak hilang dan otomatis dipulihkan saat server start.
-- **Keamanan Akun:** Diproteksi JWT dan enkripsi Bcrypt dengan role akun (Superadmin & Referee).
-
-### 2. Halaman Admin (Control Panel) - `/admin` atau `/admin.html`
-- **Mobile-First Design:** Sangat nyaman dan ergonomis diakses melalui smartphone wasit / panitia turnamen di arena.
-- **Kontrol Skor Cepat:** Tombol sentuh besar `[ +1 ]` dan `[ -1 ]` dengan auto-cap berdasarkan format.
-- **Aturan BO Otomatis:**
-  - **BO1:** Pemenang 1 poin (Max skor 1).
-  - **BO3:** Pemenang 2 poin (Max skor 2).
-  - **BO5:** Pemenang 3 poin (Max skor 3).
-  - **BO7:** Pemenang 4 poin (Max skor 4).
-- **Swap Side Instant (1-Klik):** Menukar seluruh data Tim Biru (kiri) ke Tim Merah (kanan) beserta skornya seketika.
-- **Tombol Reset Skor:** Dilengkapi dialog modal konfirmasi pencegah klik tidak sengaja.
-- **Database Preset Tim:** Dropdown untuk memilih tim yang sudah tersimpan atau input langsung nama dan tag baru.
-- **Indikator Real-Time:** Status koneksi WebSocket (Online / Offline) dan status penyimpanan ke database MySQL.
-- **Banner Sponsor & Running Ticker:** Pengaturan running text pengumuman dengan toggle ON/OFF live ke OBS.
-
-### 3. Halaman Overlay OBS - `/overlay` atau `/overlay.html`
-- **Dimensi:** 1920 x 1080 dengan latar belakang transparan (`background: transparent`).
-- **Desain Khas Esports MLBB (MPL Style):**
-  - Top-Bar Scoreboard bernuansa gelap metalik, border aksen emas (*gold trim*), sudut miring (*skewed banner*), aksen Tim Biru (kiri) vs Tim Merah (kanan).
-  - **Indikator Titik Poin Gems:** Bentuk permata kristal (*glowing diamond gems*) untuk format BO1/BO3/BO5.
-  - **Indikator "Match Point":** Badge menyala otomatis saat salah satu tim tinggal berjarak 1 kemenangan dari gelar juara.
-  - **Selebrasi "MATCH WINNER":** Popup banner perayaan kemenangan lengkap dengan efek konfeti saat match berakhir.
-  - **Sponsor Running Ticker:** Baris teks informasi berjalan di bawah scoreboard utama.
+Sistem penyiaran (*broadcast*), papan skor (*scoreboard*), dan manajemen bagan turnamen (*tournament bracket*) profesional bertema **Mobile Legends: Bang Bang (MLBB)**. Dirancang khusus untuk turnamen komunitas, sekolah (SMP/SMA/SMK), maupun turnamen umum berskala besar (hingga 57+ tim) dengan sinkronisasi real-time berlatensi ultra-rendah (<10ms) via Socket.io.
 
 ---
 
-## 🚀 Panduan Instalasi & Menjalankan
+## 🌟 Fitur Utama
+
+### 1. Database Tim Preset, Asal Sekolah & Bulk Import Google Form (`/teams`)
+- **Manajemen Tim Lengkap:** Tambah, edit, dan hapus tim beserta tag singkatan dan logo tim.
+- **Asal Sekolah / Instansi (Opsional):** 
+  - Cocok untuk turnamen antar-pelajar SMP, SMA, SMK, maupun instansi/kampus.
+  - Tampil di kartu database tim, slot bagan turnamen, dan papan skor overlay.
+  - **Ukuran Font Dinamis:** Pada overlay, nama instansi otomatis mengecil jika teks panjang (misal: `SMP NEGERI 1 KARANGANYAR SURAKARTA`) agar tidak terpotong dan layout tetap rapi.
+- **Bulk Import dari Google Form / Spreadsheet:**
+  - Copy-paste langsung baris/kolom pendaftaran dari Google Sheets hasil formulir pendaftaran Google Form.
+  - **Deteksi 2 Kolom Otomatis:** Kolom 1 = Nama Tim, Kolom 2 = Asal Sekolah/Instansi.
+  - **Auto-Generate Tag:** Singkatan tag (3–5 huruf kapital) otomatis dibuat dari inisial nama tim jika tidak disediakan.
+  - **Anti-Duplikat Cerdas:** Tim yang sudah terdaftar di database otomatis dilewati tanpa menimbulkan error.
+  - Mendukung upload file `.csv` atau `.txt` dan tabel live preview sebelum disimpan.
+- **Kolom Pencarian Instan (Search Bar):** Mempermudah pencarian tim berdasarkan nama atau tag singkatan.
+
+---
+
+### 2. Sistem Bagan Turnamen Otomatis & Skala Besar (`/bracket` & `/overlay/bracket`)
+- **Mendukung Hingga 57+ Tim:**
+  - **Babak 1 (Play-in):** 50 tim (25 match).
+  - **7 Tim Unggulan (BYE):** Otomatis langsung menunggu di babak utama *Round of 32*.
+- **Tampilan OBS Adaptif Otomatis (Global Link Tanpa Ganti URL):**
+  - Cukup gunakan 1 link global `http://localhost:3000/overlay/bracket` di OBS Browser Source.
+  - **Saat Babak 1 Aktif:** Tampilan otomatis beralih ke **Mode Fokus Babak 1 (Grid 3 Kolom)** sehingga 57 tim muat rapi dalam 1 layar 1080p tanpa terpotong!
+  - **Saat Babak 1 Selesai:** Tampilan otomatis bertransisi ke **Fase Playoffs (8 Besar)** menuju perebutan gelar juara.
+- **Fitur Kontrol Bagan:** Acak susunan tim (*Random Shuffle*), finalisasi bagan (*Finalize*), kirim pertandingan ke meja wasit (*Assign to Court*), dan sinkronisasi skor live.
+
+---
+
+### 3. Dua Pilihan Gaya Scoreboard Overlay OBS
+- **Top Overlay (Kompak Atas - 1080 x 150):**
+  - URL: `http://localhost:3000/overlay?key=<MATCH-KEY>`
+  - Papan skor kompak di bagian atas layar siaran, mudah digeser dan disesuaikan posisinya.
+- **Bottom Overlay (Full-Width 1920 x 200 - Penutup Layar Hitam HP):**
+  - URL: `http://localhost:3000/overlay/bottom?key=<MATCH-KEY>`
+  - Dirancang khusus selebar 1920px untuk **menutupi 100% area hitam di bawah layar game HP** (aspek rasio 20:9 / 19.5:9).
+  - Desain siaran 3-bagian: Info Turnamen & Babak (kiri), Scoreboard Jumbo & Crystal Gems (tengah), Sponsor & Tagar Resmi (kanan), dan Running Ticker Text (atas).
+  - **Animasi Juara:** Pop-up perayaan *"MATCH WINNER"* dan ledakan konfeti (*canvas-confetti*) otomatis saat pertandingan selesai.
+
+---
+
+### 4. Sistem Siaran Paralel Multi-Meja (4+ Courts)
+- Mendukung 4 meja pertandingan atau lebih yang berjalan simultan tanpa bentrok (*zero cross-talk*).
+- **Format Stream Key Mandiri:**
+  - Meja 1: `.../overlay/bottom?key=match-c1-8f3a9b`
+  - Meja 2: `.../overlay/bottom?key=match-c2-7d2e4c`
+  - Meja 3: `.../overlay/bottom?key=match-c3-5a1b9f`
+  - Meja 4: `.../overlay/bottom?key=match-c4-3e9d8a`
+- **Dashboard Superadmin:** Memantau dan mengendalikan semua meja pertandingan dari 1 layar.
+- **Panel Wasit Spesifik:** Setiap wasit memiliki login sendiri yang otomatis terhubung ke meja tugasnya.
+- **Status Meja Siap (Standby):** Saat pertandingan selesai, meja otomatis dikosongkan dan overlay menampilkan status *"MENUNGGU MATCH BERIKUTNYA • MEJA SIAP"*.
+
+---
+
+## 📋 Daftar Rute & URL Aplikasi
+
+| Halaman | URL | Resolusi OBS | Keterangan |
+|---|---|---|---|
+| **Control Panel Wasit / Admin** | `/admin` | - | Dashboard kendali skor touch-friendly untuk wasit |
+| **Database Tim Preset** | `/teams` | - | Kelola tim, asal sekolah, dan Bulk Import GForm |
+| **Manajemen Bagan Turnamen** | `/bracket` | - | Atur bagan, acak tim, dan kirim match ke meja wasit |
+| **OBS Scoreboard Atas** | `/overlay?key=<KEY>` | `1080 x 150` | Scoreboard atas transparan MLBB style |
+| **OBS Scoreboard Bawah (Full)** | `/overlay/bottom?key=<KEY>`| `1920 x 200` | Penutup hitam layar HP full-width dengan nama sekolah |
+| **OBS Bagan Turnamen (Global)** | `/overlay/bracket` | `1920 x 1080` | Bagan adaptif otomatis (3 Kolom $\to$ Playoffs 8 Besar) |
+
+---
+
+## 🚀 Panduan Instalasi Lokal (Localhost)
 
 ### Persyaratan Sistem:
-- **Node.js** v18+ atau v20+
-- **MySQL Server** (XAMPP, Laragon, Docker, atau MySQL Server standalone)
+* **Node.js** v18+ atau v20+
+* **MySQL Server** (XAMPP, Laragon, atau MySQL standalone)
 
-### 1. Konfigurasi Database & Server
-1. Buat database baru di MySQL bernama `esports_overlay`:
-   ```sql
-   CREATE DATABASE esports_overlay;
-   ```
-2. Salin dan sesuaikan file lingkungan di folder `server/`:
-   ```bash
-   cd server
-   cp .env.example .env
-   ```
-   Pastikan koneksi database pada `DATABASE_URL` sudah sesuai, contoh:
+### 1. Setup Database
+1. Buat database baru di MySQL dengan nama `esports_overlay`.
+2. Buat file `.env` di folder `server/`:
    ```env
-   DATABASE_URL="mysql://root:password_anda@localhost:3306/esports_overlay"
    PORT=3000
+   DATABASE_URL="mysql://root:password_anda@localhost:3306/esports_overlay"
    JWT_SECRET="kunci-rahasia-esports-2026"
    CORS_ORIGIN="http://localhost:5173"
    ```
-
-3. Jalankan migrasi dan seed data awal:
-   ```bash
-   # Masuk ke folder server
+3. Update skema database:
+   ```cmd
    cd server
-
-   # Buat tabel di MySQL
    npx prisma db push
-
-   # Isi data akun wasit default & preset tim MPL (ONIC, RRQ, EVOS, BTR, dll)
    npm run prisma:seed
    ```
 
 ### 2. Menjalankan Aplikasi
-
-#### Mode Development:
-Buka dua terminal:
-- **Terminal 1 (Backend Server):**
-  ```bash
-  cd server
-  npm run dev
-  ```
-  *(Server berjalan di `http://localhost:3000`)*
-
-- **Terminal 2 (Frontend Vite):**
-  ```bash
-  cd client
-  npm run dev
-  ```
-  *(Frontend berjalan di `http://localhost:5173`)*
-
-#### Mode Production:
-Build frontend dan jalankan langsung dari satu server Express:
-```bash
-# 1. Build client
-cd client
-npm run build
-
-# 2. Build dan start server
-cd ../server
-npm run build
-npm start
-```
-*(Aplikasi terpadu dapat diakses langsung pada port `http://localhost:3000`)*
+* **Mode Development (Dua Terminal):**
+  * Terminal 1 (Server): `cd server && npm run dev`
+  * Terminal 2 (Client): `cd client && npm run dev`
+* **Mode Production Lokal (Satu Perintah):**
+  * Jalankan file batch [update-all.bat](file:///d:/ngoding/liveweb/update-all.bat)
+  * Akses langsung melalui: `http://localhost:3000`
 
 ---
 
-## 🏟️ Fitur 4 Pertandingan Paralel (Multi-Court Stream Key)
+## ⚡ File Batch Otomatis (Windows Shortcut)
 
-Sistem ini mendukung hingga 4+ pertandingan yang berjalan **secara simultan/paralel** dan disiarkan langsung di 4 komputer OBS yang berbeda tanpa saling bentrok (*zero cross-talk*).
+Folder proyek sudah dilengkapi file `.bat` siap pakai tanpa perlu menghafal perintah terminal:
 
-### 1. Format Kunci Pertandingan (Stream Key):
-Masing-masing pertandingan memiliki secret key unik untuk URL Browser Source OBS:
-- **Meja 1 (Court 1):** `http://localhost:3000/overlay?key=match-c1-8f3a9b`
-- **Meja 2 (Court 2):** `http://localhost:3000/overlay?key=match-c2-7d2e4c`
-- **Meja 3 (Court 3):** `http://localhost:3000/overlay?key=match-c3-5a1b9f`
-- **Meja 4 (Court 4):** `http://localhost:3000/overlay?key=match-c4-3e9d8a`
-
-> 💡 **Panduan Transparan:** Jika operator OBS membuka `/overlay` tanpa parameter key, layar akan menampilkan panduan transparan yang ramah untuk memasukkan key yang sesuai.
-
-### 2. Akun Wasit & Superadmin:
-- **Superadmin (Ketua Panitia):** `admin` / `admin123`
-  - Memiliki **Dashboard Monitoring 4 Meja** sekaligus di satu layar: dapat memantau keempat skor secara live, mengubah skor meja mana pun secara sentral, atau membuka kontrol penuh per meja.
-- **Wasit Meja 1:** `wasit1` / `wasit123` &rarr; Otomatis terhubung ke Court 1
-- **Wasit Meja 2:** `wasit2` / `wasit123` &rarr; Otomatis terhubung ke Court 2
-- **Wasit Meja 3:** `wasit3` / `wasit123` &rarr; Otomatis terhubung ke Court 3
-- **Wasit Meja 4:** `wasit4` / `wasit123` &rarr; Otomatis terhubung ke Court 4
-
-### 3. Dua Pilihan Gaya Overlay OBS:
-Anda dapat memilih layout sesuai kebutuhan dan suasana siaran:
-- **Top Overlay (Scoreboard Atas Kompak):**
-  - URL: `http://localhost:3000/overlay?key=<MATCH-KEY>`
-  - Resolusi OBS Browser Source: **Width: `1080`**, **Height: `150`**
-  - Sangat mudah digeser dan disesuaikan posisinya di atas layar.
-- **Bottom Overlay (Full-Width Footer 1920x200 - Penutup Layar Hitam HP):**
-  - URL: `http://localhost:3000/overlay/bottom?key=<MATCH-KEY>`
-  - Resolusi OBS Browser Source: **Width: `1920`**, **Height: `200`**
-  - Dirancang khusus membentang penuh dari kiri ke kanan untuk **menutupi 100% area hitam di bawah layar game HP** yang tidak tertutup oleh tangkapan layar ponsel (aspect ratio 20:9 / 19.5:9).
-  - Dilengkapi layout siaran 3-bagian (Kiri: Info Turnamen & Meja, Tengah: Scoreboard & Gems, Kanan: Sponsor & Hashtag turnamen, Atas: Running Ticker pembatas).
+- **`update-client.bat`**: Mengompilasi frontend Vite ke folder `client/dist`.
+- **`update-db.bat`**: Menjalankan `npx prisma db push` dan `prisma generate` untuk memperbarui tabel database lokal.
+- **`update-all.bat`**: Menjalankan update skema database, kompilasi frontend, dan kompilasi backend server sekaligus.
+- **`build-hosting.bat`**: Membundel seluruh aplikasi menjadi **`deploy_hosting.zip`** siap upload ke cPanel.
 
 ---
 
-## 🏆 Sistem Bagan Turnamen Otomatis (Tournament Bracket)
+## 🌐 Panduan Upload ke Server Hosting (cPanel)
 
-Sistem ini memiliki generator bagan turnamen cerdas dan terintegrasi penuh dengan meja pertandingan live:
+Paket hosting menggunakan **Phusion Passenger / LiteSpeed** yang dioptimalkan agar ringan (~25MB) dan tidak memerlukan build di server hosting:
 
-### 1. Fitur Bagan:
-- **Dukungan Format Lengkap:** Mendukung format **Single Elimination** (Gugur Tunggal) dan **Double Elimination** (Upper & Lower Bracket + Grand Finals).
-- **Auto-BYE Dinamis:** Menyesuaikan secara otomatis dengan jumlah tim yang didaftarkan (misal 5, 6, 7 tim akan otomatis dipadatkan ke bagan 8 dengan status BYE otomatis).
-- **Acak Bagan (Random Seed):** Tombol acak susunan tim selama bagan masih berstatus *Draft*.
-- **Finalisasi Bagan:** Mengunci susunan bagan agar tidak dapat berubah/teracak lagi sebelum turnamen dimulai.
-- **Dispatch Meja (Assign Court):** Panitia / Head Referee dapat memilih match mana yang akan dimainkan di Meja mana (Meja 1, Meja 2, Meja 3, Meja 4).
-- **Live Score Sync:** Skor pada meja yang sedang bertanding otomatis tercermin secara real-time pada bagan turnamen.
-- **Selesaikan Match & Auto-Clear Meja:** Pemenang pertandingan baru akan melaju (*advance*) ke ronde berikutnya ketika tombol "Selesaikan Match" dikonfirmasi. Meja yang bersangkutan otomatis dikosongkan dan overlay di meja tersebut otomatis beralih menampilkan status **"MENUNGGU PERTANDINGAN BERIKUTNYA • MEJA SIAP"**.
-
-### 2. URL Bagan:
-- **Admin Bracket Manager:** `http://localhost:3000/bracket` (atau tab "Bagan Turnamen" di Admin Panel)
-- **Overlay Bagan OBS (1920 x 1080):** `http://localhost:3000/overlay/bracket`
-  - Sangat cocok untuk transisi jeda antar-match (intermission), caster desk, atau layar monitor penonton di arena.
-
----
-
-## 🎥 Cara Memasang di OBS Studio
-
-1. Buka software **OBS Studio**.
-2. Pada panel **Sources**, klik tombol `+` lalu pilih **Browser**.
-3. Beri nama source (contoh: `Scoreboard MLBB`).
-4. Atur ukuran Browser Source (Disesuaikan pas dengan ukuran komponen agar mudah digeser & diatur di layar OBS):
-   - **URL:** `http://localhost:3000/overlay` (atau `http://IP-VPS-ANDA:3000/overlay`)
-   - **Width:** `1080`
-   - **Height:** `150`
-   - Centang **"Shutdown source when not visible"** (opsional).
-   - Centang **"Refresh browser when scene becomes active"** (opsional).
-5. Klik **OK**. Bounding box hijau di OBS kini akan pas membungkus scoreboard tanpa menyisakan ruang kosong besar, sehingga Anda dapat dengan mudah menggeser, memperbesar/memperkecil, atau menempatkannya di mana saja pada layar siaran.
+1. **Buat File ZIP di Komputer:**
+   Jalankan file [build-hosting.bat](file:///d:/ngoding/liveweb/build-hosting.bat) atau ketik `npm run build:hosting`. File `deploy_hosting.zip` akan otomatis terbuat.
+2. **Update Database di phpMyAdmin Hosting:**
+   Buka phpMyAdmin cPanel $\to$ pilih database turnamen $\to$ tab **SQL**, lalu jalankan:
+   ```sql
+   ALTER TABLE `Team` ADD COLUMN IF NOT EXISTS `institution` VARCHAR(191) NULL;
+   ALTER TABLE `Match` ADD COLUMN IF NOT EXISTS `teamAInstitution` VARCHAR(191) NULL;
+   ALTER TABLE `Match` ADD COLUMN IF NOT EXISTS `teamBInstitution` VARCHAR(191) NULL;
+   ALTER TABLE `BracketMatch` ADD COLUMN IF NOT EXISTS `teamAInstitution` VARCHAR(191) NULL;
+   ALTER TABLE `BracketMatch` ADD COLUMN IF NOT EXISTS `teamBInstitution` VARCHAR(191) NULL;
+   ```
+3. **Upload & Ekstrak di File Manager:**
+   Upload file `deploy_hosting.zip` ke folder domain (contoh: `/home/ykxyeguk/live.smekid.my.id`) $\to$ klik kanan $\to$ **Extract**.
+   *(File konfigurasi `.env` Anda yang lama tetap aman dan tidak akan tertimpa).*
+4. **Restart Aplikasi:**
+   Buka menu **Setup Node.js App** di cPanel $\to$ klik tombol **Restart**.
+5. **Selesai!** Website dan overlay langsung aktif di domain Anda.
 
 ---
 
-## 📱 Akses Admin Panel Panitia / Wasit (HP)
+## 🔑 Akun Default
 
-1. Buka browser di HP wasit / panitia.
-2. Arahkan ke: `http://<IP-KOMPUTER-ATAU-VPS>:3000/admin`
-3. Masuk dengan akun default:
-   - **Username:** `admin`
-   - **Password:** `admin123`
-4. Wasit dapat langsung mengendalikan skor pertandingan secara live tanpa perlu menyentuh komputer OBS.
+* **Superadmin (Ketua Panitia):** `admin` / `admin123`
+* **Wasit Meja 1:** `wasit1` / `wasit123`
+* **Wasit Meja 2:** `wasit2` / `wasit123`
+* **Wasit Meja 3:** `wasit3` / `wasit123`
+* **Wasit Meja 4:** `wasit4` / `wasit123`
 
 ---
 
-## 📁 Struktur Proyek
+## 📁 Struktur Direktori
 
 ```plaintext
 liveweb/
 ├── server/               # Express.js + Socket.io + Prisma ORM
 │   ├── prisma/
-│   │   ├── schema.prisma # Model User, Team, Match, Sponsor, Setting
-│   │   └── seed.ts       # Seeding tim preset MLBB & akun wasit
-│   ├── uploads/          # Folder file logo tim yang diunggah
+│   │   ├── schema.prisma # Model User, Team, Match, BracketMatch, Sponsor, Setting
+│   │   └── seed.ts       # Seeder tim preset & akun wasit
+│   ├── uploads/          # Direktori penyimpanan logo tim
 │   └── src/
-│       ├── services/     # In-memory match manager & async save
-│       ├── controllers/  # Auth, Team CRUD, Match Controls, Sponsor
-│       ├── sockets/      # Realtime Socket.io events
+│       ├── services/     # In-memory matchState & bracketService
+│       ├── controllers/  # teamController, matchController, bracketController
 │       └── index.ts      # Server entry point
 │
-├── client/               # Vite + Vue 3 + Tailwind CSS + Pinia
-│   ├── public/
-│   │   ├── admin.html    # Entry/redirect route admin
-│   │   └── overlay.html  # Entry/redirect route overlay
+├── client/               # Vue 3 + Tailwind CSS + Pinia + Lucide Icons + Vite
 │   └── src/
-│       ├── assets/styles/mlbb-theme.css # Efek gold trim, neon glow, metallic
-│       ├── components/
-│       │   ├── overlay/  # Scoreboard, Gems, Match Point, Winner celebration
-│       │   └── admin/    # Touch Score Buttons, Swap Side, Team selector
-│       ├── stores/       # Pinia matchStore, authStore, teamStore
-│       └── views/        # AdminView, OverlayView, LoginView, MatchesView
+│       ├── components/   # ScoreController, MatchConfigForm, GemPoints, WinnerOverlay
+│       ├── stores/       # useMatchStore, useTeamStore, useBracketStore, useAuthStore
+│       └── views/        # TeamsView, AdminView, BottomOverlayView, OverlayView, BracketOverlayView
+│
+├── package-hosting.js    # Script otomatis bundler cPanel hosting
+├── build-hosting.bat     # Shortcut pembuatan deploy_hosting.zip
+├── update-all.bat        # Shortcut update DB & build client/server
+├── update-client.bat     # Shortcut kompilasi frontend
+├── update-db.bat         # Shortcut migrasi tabel Prisma
 └── README.md
 ```
-
