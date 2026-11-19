@@ -169,7 +169,7 @@
                 :key="m.id"
                 class="rounded-2xl p-3.5 bg-slate-900 border transition-all shadow-xl space-y-3 relative overflow-hidden"
                 :class="[
-                  isRolling && roundObj.round === 1
+                  isRolling && (roundObj.round === 1 || m.teamAId || m.teamBId)
                     ? 'border-2 border-amber-400 shadow-gold-glow animate-pulse'
                     : m.status === 'LIVE'
                     ? 'border-2 border-amber-400 shadow-gold-glow'
@@ -183,7 +183,7 @@
                     class="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider"
                     :class="nodeStatusBadgeClass(m.status)"
                   >
-                    {{ isRolling && roundObj.round === 1 ? 'ROLLING...' : m.status }}
+                    {{ isRolling && (roundObj.round === 1 || m.teamAId || m.teamBId) ? 'ROLLING...' : m.status }}
                   </span>
                 </div>
 
@@ -450,84 +450,7 @@ import {
   RotateCcw,
 } from "lucide-vue-next";
 
-// Web Audio API Synthesizer for Esports Roulette SFX (Zero-dependency & 0ms latency)
-class BracketAudioFX {
-  private ctx: AudioContext | null = null;
-
-  private getContext(): AudioContext | null {
-    try {
-      if (!this.ctx) {
-        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-        if (AudioCtx) this.ctx = new AudioCtx();
-      }
-      if (this.ctx && this.ctx.state === "suspended") {
-        this.ctx.resume();
-      }
-      return this.ctx;
-    } catch {
-      return null;
-    }
-  }
-
-  // Mechanical tick for rapid roulette spin
-  public playTick(pitch: number = 750) {
-    try {
-      const ctx = this.getContext();
-      if (!ctx) return;
-
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(pitch, ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(140, ctx.currentTime + 0.035);
-
-      gain.gain.setValueAtTime(0.18, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.035);
-
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-
-      osc.start();
-      osc.stop(ctx.currentTime + 0.035);
-    } catch {
-      // Audio autoplay policy fallback
-    }
-  }
-
-  // Victorious / lock-in chime sound (golden arpeggio)
-  public playLockChime() {
-    try {
-      const ctx = this.getContext();
-      if (!ctx) return;
-
-      const now = ctx.currentTime;
-      const notes = [523.25, 659.25, 783.99, 1046.5]; // C5, E5, G5, C6
-
-      notes.forEach((freq, i) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-
-        osc.type = "triangle";
-        osc.frequency.setValueAtTime(freq, now + i * 0.08);
-
-        gain.gain.setValueAtTime(0, now + i * 0.08);
-        gain.gain.linearRampToValueAtTime(0.25, now + i * 0.08 + 0.02);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.08 + 0.65);
-
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-
-        osc.start(now + i * 0.08);
-        osc.stop(now + i * 0.08 + 0.65);
-      });
-    } catch {
-      // Audio policy fallback
-    }
-  }
-}
-
-const audioFX = new BracketAudioFX();
+import { bracketAudioFX } from "../utils/bracketAudioFX";
 
 const bracketStore = useBracketStore();
 const teamStore = useTeamStore();
@@ -684,6 +607,9 @@ function startRoulette() {
   isRolling.value = true;
   isStopping.value = false;
 
+  // Broadcast ke OBS overlay agar ikut mengacak secara real-time
+  bracketStore.emitRouletteStart();
+
   const cycleShuffle = () => {
     const shuffled = [...allTeams].sort(() => Math.random() - 0.5);
     const newSlots: Record<string, { teamA: any; teamB: any }> = {};
@@ -697,7 +623,7 @@ function startRoulette() {
     });
 
     rollingSlots.value = newSlots;
-    audioFX.playTick(650 + Math.random() * 250);
+    bracketAudioFX.playTick(650 + Math.random() * 250);
   };
 
   cycleShuffle();
@@ -708,6 +634,9 @@ async function stopRoulette() {
   if (!isRolling.value || isStopping.value) return;
   isStopping.value = true;
   clearInterval(rollTimer);
+
+  // Broadcast ke OBS overlay agar ikut melambat & mengunci
+  bracketStore.emitRouletteStop();
 
   const initialMatches = tournament.value?.matches.filter(
     (m) => m.round === 1 || (m.round === 2 && (m.teamAId || m.teamBId))
@@ -743,7 +672,7 @@ async function stopRoulette() {
     });
 
     rollingSlots.value = newSlots;
-    audioFX.playTick(600 - i * 65);
+    bracketAudioFX.playTick(600 - i * 65);
   }
 
   // Kunci final di backend
@@ -751,7 +680,7 @@ async function stopRoulette() {
     if (tournament.value) {
       await bracketStore.shuffleBracket(tournament.value.id);
     }
-    audioFX.playLockChime();
+    bracketAudioFX.playLockChime();
     toastMessage.value = "🎉 Susunan Tim Resmi Terkunci!";
     setTimeout(() => (toastMessage.value = ""), 3000);
   } catch (err: any) {
@@ -798,17 +727,22 @@ async function handleAssignToCourt(bracketMatchId: string) {
 function isCourtBusy(courtMatchKey: string): boolean {
   if (!courtMatchKey) return false;
 
-  // 1. Cek apakah ada pertandingan di bagan yang sedang LIVE di meja ini
+  // Jika meja secara eksplisit berstatus STANDBY (isWaitingForNext === true), maka meja 100% KOSONG
+  const court = matchStore.allMatches.find((c) => c.matchKey === courtMatchKey);
+  if (court && court.isWaitingForNext) {
+    return false;
+  }
+
+  // Cek apakah status meja di memory/store sedang aktif bertanding (bukan standby)
+  if (court && !court.isWaitingForNext && court.bracketMatchId) {
+    return true;
+  }
+
+  // Cek apakah ada pertandingan di bagan yang sedang LIVE di meja ini
   const hasLiveInTournament = tournament.value?.matches.some(
     (m) => m.status === "LIVE" && m.courtMatchKey === courtMatchKey
   );
   if (hasLiveInTournament) return true;
-
-  // 2. Cek apakah status meja di memory/store sedang aktif bertanding (bukan standby)
-  const court = matchStore.allMatches.find((c) => c.matchKey === courtMatchKey);
-  if (court && !court.isWaitingForNext && court.bracketMatchId) {
-    return true;
-  }
 
   return false;
 }

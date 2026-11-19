@@ -1,6 +1,7 @@
 import { Server as SocketIOServer, Socket } from "socket.io";
 import { matchState } from "../services/matchState.js";
 import { bracketService } from "../services/bracketService.js";
+import { prisma } from "../config/db.js";
 
 export function setupMatchSocket(io: SocketIOServer) {
   matchState.setSocketServer(io);
@@ -48,6 +49,15 @@ export function setupMatchSocket(io: SocketIOServer) {
       socket.emit("bracket:init", { tournament });
     });
 
+    // 3b. Sinkronisasi Live Rolet Pengacakan Tim antara Admin & OBS Overlay
+    socket.on("bracket:roulette:start", () => {
+      io.to("bracket_room").emit("bracket:roulette:start");
+    });
+
+    socket.on("bracket:roulette:stop", () => {
+      io.to("bracket_room").emit("bracket:roulette:stop");
+    });
+
     // 4. Score Actions scoped by matchKey
     socket.on("score:change", async ({ matchKey, team, delta }: { matchKey: string; team: "A" | "B"; delta: number }) => {
       if (!matchKey) return;
@@ -71,13 +81,38 @@ export function setupMatchSocket(io: SocketIOServer) {
       matchState.updateMatchConfig(matchKey, config);
     });
 
-    socket.on("court:set-waiting", ({ matchKey, isWaiting }: { matchKey: string; isWaiting: boolean }) => {
+    socket.on("court:set-waiting", async ({ matchKey, isWaiting }: { matchKey: string; isWaiting: boolean }) => {
       if (!matchKey) return;
       matchState.setCourtWaitingState(matchKey, isWaiting);
+      if (isWaiting) {
+        await prisma.bracketMatch.updateMany({
+          where: { courtMatchKey: matchKey, status: "LIVE" },
+          data: {
+            status: "READY",
+            assignedCourt: null,
+            courtMatchKey: null,
+          },
+        });
+        bracketService.broadcastBracket();
+      }
     });
 
-    socket.on("courts:reset-unassigned", () => {
+    socket.on("courts:reset-unassigned", async () => {
       matchState.resetUnassignedCourtsToWaiting();
+      const allMatches = matchState.getAllMatches();
+      for (const court of allMatches) {
+        if (court.isWaitingForNext) {
+          await prisma.bracketMatch.updateMany({
+            where: { courtMatchKey: court.matchKey, status: "LIVE" },
+            data: {
+              status: "READY",
+              assignedCourt: null,
+              courtMatchKey: null,
+            },
+          });
+        }
+      }
+      bracketService.broadcastBracket();
     });
 
     socket.on("settings:update", (newSettings) => {

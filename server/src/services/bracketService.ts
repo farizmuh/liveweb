@@ -638,27 +638,34 @@ class BracketService {
     if (!court) throw new Error("Meja/Court pertandingan tidak ditemukan.");
 
     // VALIDASI KETAT ANTI-TUMPUK / BUSY CHECK:
-    // 1. Cek apakah di database sudah ada pertandingan lain yang sedang LIVE di meja ini
-    const activeMatchOnCourt = await prisma.bracketMatch.findFirst({
-      where: {
-        courtMatchKey,
-        status: "LIVE",
-        id: { not: bracketMatchId },
-      },
-    });
-
-    if (activeMatchOnCourt) {
-      const matchLabel = `${activeMatchOnCourt.teamAName || 'TBD'} vs ${activeMatchOnCourt.teamBName || 'TBD'}`;
-      throw new Error(
-        `${court.courtName} saat ini sedang aktif bertanding (${matchLabel}). Selesaikan atau tarik pertandingan tersebut terlebih dahulu sebelum menugaskan pertandingan baru.`
-      );
-    }
-
-    // 2. Cek apakah meja di memory sedang aktif (bukan status standby/menunggu)
-    if (!court.isWaitingForNext && court.bracketMatchId && court.bracketMatchId !== bracketMatchId) {
-      throw new Error(
-        `${court.courtName} saat ini sedang aktif digunakan. Selesaikan pertandingan atau kosongkan meja tersebut terlebih dahulu.`
-      );
+    // A. Jika meja saat ini berstatus STANDBY (MEJA KOSONG) di panel wasit/admin:
+    if (court.isWaitingForNext || !court.bracketMatchId) {
+      // Bersihkan semua pertandingan lama yang mungkin masih tersisa 'LIVE' di database pada meja ini
+      await prisma.bracketMatch.updateMany({
+        where: {
+          courtMatchKey,
+          status: "LIVE",
+          id: { not: bracketMatchId },
+        },
+        data: {
+          status: "READY",
+          assignedCourt: null,
+          courtMatchKey: null,
+        },
+      });
+    } else {
+      // B. Meja benar-benar sedang aktif bertanding (bukan standby) dengan match lain
+      if (court.bracketMatchId !== bracketMatchId) {
+        const activeMatchOnCourt = await prisma.bracketMatch.findUnique({
+          where: { id: court.bracketMatchId },
+        });
+        const matchLabel = activeMatchOnCourt
+          ? `${activeMatchOnCourt.teamAName || 'TBD'} vs ${activeMatchOnCourt.teamBName || 'TBD'}`
+          : `${court.teamA?.name || 'A'} vs ${court.teamB?.name || 'B'}`;
+        throw new Error(
+          `${court.courtName} saat ini sedang aktif bertanding (${matchLabel}). Selesaikan atau tarik pertandingan tersebut terlebih dahulu sebelum menugaskan pertandingan baru.`
+        );
+      }
     }
 
     // Jika match ini sebelumnya ditugaskan ke meja lain, kosongkan meja sebelumnya
@@ -892,7 +899,15 @@ class BracketService {
 
       for (const court of matchState.getAllMatches()) {
         if (!activeCourtKeys.has(court.matchKey)) {
-          // Meja ini belum dikirim match dari braket -> OTOMATIS KOSONGKAN & SET MENUNGGU
+          // Meja ini tidak memiliki match aktif di turnamen ini -> Bersihkan sisa LIVE di DB & set STANDBY
+          await prisma.bracketMatch.updateMany({
+            where: { courtMatchKey: court.matchKey, status: "LIVE" },
+            data: {
+              status: "READY",
+              assignedCourt: null,
+              courtMatchKey: null,
+            },
+          });
           if (!court.isWaitingForNext || court.bracketMatchId) {
             matchState.setCourtWaitingState(court.matchKey, true);
           }

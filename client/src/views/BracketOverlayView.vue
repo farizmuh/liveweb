@@ -37,6 +37,18 @@
       </div>
     </header>
 
+    <!-- BANNER LIVE DRAWING / ROULETTE (TAMPIL SAAT ADMIN MENGACAK TIM SECARA LIVE) -->
+    <Transition name="fade">
+      <div
+        v-if="isRolling"
+        class="w-full bg-gradient-to-r from-red-600 via-amber-500 to-red-600 text-white font-black text-xs uppercase tracking-widest text-center py-2 rounded-xl shadow-gold-glow flex items-center justify-center gap-3 shrink-0 animate-pulse border-2 border-amber-300 my-1 z-20"
+      >
+        <span class="w-2.5 h-2.5 rounded-full bg-white animate-ping"></span>
+        <span>{{ rollBannerText }}</span>
+        <span class="w-2.5 h-2.5 rounded-full bg-white animate-ping"></span>
+      </div>
+    </Transition>
+
     <!-- ============================================================== -->
     <!-- CONTENT AREA DENGAN TRANSISI HALUS (SMOOTH FADE IN/OUT)        -->
     <!-- ============================================================== -->
@@ -74,12 +86,13 @@
               :key="m.id"
               class="rounded-lg border bg-slate-950/80 px-2 py-1 flex flex-col justify-center transition shadow"
               :class="[
-                m.status === 'LIVE' ? 'border-amber-400 bg-amber-950/20 shadow-gold-glow' : 'border-slate-800'
+                isRolling ? 'border-amber-400 bg-amber-950/30 shadow-gold-glow' : (m.status === 'LIVE' ? 'border-amber-400 bg-amber-950/20 shadow-gold-glow' : 'border-slate-800')
               ]"
             >
               <div class="flex items-center justify-between text-[9px] font-bold text-slate-400 pb-0.5">
-                <span class="uppercase tracking-wider text-amber-400">MATCH #{{ m.matchOrder }}</span>
-                <span v-if="m.status === 'LIVE'" class="text-red-400 uppercase tracking-wider flex items-center gap-1 font-black">
+                <span class="uppercase tracking-wider text-amber-400 font-extrabold">MATCH #{{ m.matchOrder }}</span>
+                <span v-if="isRolling" class="text-amber-300 uppercase tracking-wider font-black animate-pulse">ROLLING...</span>
+                <span v-else-if="m.status === 'LIVE'" class="text-red-400 uppercase tracking-wider flex items-center gap-1 font-black">
                   <span class="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping"></span> LIVE {{ m.assignedCourt }}
                 </span>
                 <span v-else class="text-slate-500 uppercase">{{ m.status }}</span>
@@ -87,37 +100,37 @@
 
               <!-- Team A -->
               <div class="flex items-center justify-between py-0.5 text-xs">
-                <div class="flex items-center gap-1.5 overflow-hidden">
-                  <span class="w-4 text-[9px] font-black text-amber-400 shrink-0">{{ m.teamAShort?.slice(0, 3) || '?' }}</span>
+                <div class="flex items-center gap-1.5 overflow-hidden min-w-0 flex-1 pr-2">
+                  <span class="w-4 text-[9px] font-black text-amber-400 shrink-0">{{ getDisplayTeam(m, 'A').shortName?.slice(0, 3) || '?' }}</span>
                   <div class="truncate max-w-[155px]">
                     <span class="font-bold text-white truncate block leading-tight" :class="m.winnerTeam === 'A' ? 'text-amber-300 font-black' : ''">
-                      {{ m.teamAName || 'TBD' }}
+                      {{ getDisplayTeam(m, 'A').name || 'TBD' }}
                     </span>
-                    <span v-if="m.teamA?.institution || m.teamAInstitution" class="text-[8px] text-cyan-300 font-medium truncate block leading-none">
-                      {{ m.teamA?.institution || m.teamAInstitution }}
+                    <span v-if="getDisplayTeam(m, 'A').institution" class="text-[8px] text-cyan-300 font-medium truncate block leading-none">
+                      {{ getDisplayTeam(m, 'A').institution }}
                     </span>
                   </div>
                 </div>
-                <span class="font-display font-black text-xs" :class="m.winnerTeam === 'A' ? 'text-amber-300' : 'text-slate-400'">
-                  {{ m.scoreA }}
+                <span class="font-display font-black text-xs shrink-0" :class="m.winnerTeam === 'A' ? 'text-amber-300' : 'text-slate-400'">
+                  {{ isRolling ? '-' : m.scoreA }}
                 </span>
               </div>
 
               <!-- Team B -->
               <div class="flex items-center justify-between py-0.5 text-xs border-t border-slate-900">
-                <div class="flex items-center gap-1.5 overflow-hidden">
-                  <span class="w-4 text-[9px] font-black text-amber-400 shrink-0">{{ m.teamBShort?.slice(0, 3) || '?' }}</span>
+                <div class="flex items-center gap-1.5 overflow-hidden min-w-0 flex-1 pr-2">
+                  <span class="w-4 text-[9px] font-black text-amber-400 shrink-0">{{ getDisplayTeam(m, 'B').shortName?.slice(0, 3) || '?' }}</span>
                   <div class="truncate max-w-[155px]">
                     <span class="font-bold text-white truncate block leading-tight" :class="m.winnerTeam === 'B' ? 'text-amber-300 font-black' : ''">
-                      {{ m.teamBName || 'TBD' }}
+                      {{ getDisplayTeam(m, 'B').name || 'TBD' }}
                     </span>
-                    <span v-if="m.teamB?.institution || m.teamBInstitution" class="text-[8px] text-cyan-300 font-medium truncate block leading-none">
-                      {{ m.teamB?.institution || m.teamBInstitution }}
+                    <span v-if="getDisplayTeam(m, 'B').institution" class="text-[8px] text-cyan-300 font-medium truncate block leading-none">
+                      {{ getDisplayTeam(m, 'B').institution }}
                     </span>
                   </div>
                 </div>
-                <span class="font-display font-black text-xs" :class="m.winnerTeam === 'B' ? 'text-amber-300' : 'text-slate-400'">
-                  {{ m.scoreB }}
+                <span class="font-display font-black text-xs shrink-0" :class="m.winnerTeam === 'B' ? 'text-amber-300' : 'text-slate-400'">
+                  {{ isRolling ? '-' : m.scoreB }}
                 </span>
               </div>
             </div>
@@ -130,12 +143,13 @@
               :key="m.id"
               class="rounded-lg border bg-slate-950/80 px-2 py-1 flex flex-col justify-center transition shadow"
               :class="[
-                m.status === 'LIVE' ? 'border-amber-400 bg-amber-950/20 shadow-gold-glow' : 'border-slate-800'
+                isRolling ? 'border-amber-400 bg-amber-950/30 shadow-gold-glow' : (m.status === 'LIVE' ? 'border-amber-400 bg-amber-950/20 shadow-gold-glow' : 'border-slate-800')
               ]"
             >
               <div class="flex items-center justify-between text-[9px] font-bold text-slate-400 pb-0.5">
-                <span class="uppercase tracking-wider text-amber-400">MATCH #{{ m.matchOrder }}</span>
-                <span v-if="m.status === 'LIVE'" class="text-red-400 uppercase tracking-wider flex items-center gap-1 font-black">
+                <span class="uppercase tracking-wider text-amber-400 font-extrabold">MATCH #{{ m.matchOrder }}</span>
+                <span v-if="isRolling" class="text-amber-300 uppercase tracking-wider font-black animate-pulse">ROLLING...</span>
+                <span v-else-if="m.status === 'LIVE'" class="text-red-400 uppercase tracking-wider flex items-center gap-1 font-black">
                   <span class="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping"></span> LIVE {{ m.assignedCourt }}
                 </span>
                 <span v-else class="text-slate-500 uppercase">{{ m.status }}</span>
@@ -143,37 +157,37 @@
 
               <!-- Team A -->
               <div class="flex items-center justify-between py-0.5 text-xs">
-                <div class="flex items-center gap-1.5 overflow-hidden">
-                  <span class="w-4 text-[9px] font-black text-amber-400 shrink-0">{{ m.teamAShort?.slice(0, 3) || '?' }}</span>
+                <div class="flex items-center gap-1.5 overflow-hidden min-w-0 flex-1 pr-2">
+                  <span class="w-4 text-[9px] font-black text-amber-400 shrink-0">{{ getDisplayTeam(m, 'A').shortName?.slice(0, 3) || '?' }}</span>
                   <div class="truncate max-w-[155px]">
                     <span class="font-bold text-white truncate block leading-tight" :class="m.winnerTeam === 'A' ? 'text-amber-300 font-black' : ''">
-                      {{ m.teamAName || 'TBD' }}
+                      {{ getDisplayTeam(m, 'A').name || 'TBD' }}
                     </span>
-                    <span v-if="m.teamA?.institution || m.teamAInstitution" class="text-[8px] text-cyan-300 font-medium truncate block leading-none">
-                      {{ m.teamA?.institution || m.teamAInstitution }}
+                    <span v-if="getDisplayTeam(m, 'A').institution" class="text-[8px] text-cyan-300 font-medium truncate block leading-none">
+                      {{ getDisplayTeam(m, 'A').institution }}
                     </span>
                   </div>
                 </div>
-                <span class="font-display font-black text-xs" :class="m.winnerTeam === 'A' ? 'text-amber-300' : 'text-slate-400'">
-                  {{ m.scoreA }}
+                <span class="font-display font-black text-xs shrink-0" :class="m.winnerTeam === 'A' ? 'text-amber-300' : 'text-slate-400'">
+                  {{ isRolling ? '-' : m.scoreA }}
                 </span>
               </div>
 
               <!-- Team B -->
               <div class="flex items-center justify-between py-0.5 text-xs border-t border-slate-900">
-                <div class="flex items-center gap-1.5 overflow-hidden">
-                  <span class="w-4 text-[9px] font-black text-amber-400 shrink-0">{{ m.teamBShort?.slice(0, 3) || '?' }}</span>
+                <div class="flex items-center gap-1.5 overflow-hidden min-w-0 flex-1 pr-2">
+                  <span class="w-4 text-[9px] font-black text-amber-400 shrink-0">{{ getDisplayTeam(m, 'B').shortName?.slice(0, 3) || '?' }}</span>
                   <div class="truncate max-w-[155px]">
                     <span class="font-bold text-white truncate block leading-tight" :class="m.winnerTeam === 'B' ? 'text-amber-300 font-black' : ''">
-                      {{ m.teamBName || 'TBD' }}
+                      {{ getDisplayTeam(m, 'B').name || 'TBD' }}
                     </span>
-                    <span v-if="m.teamB?.institution || m.teamBInstitution" class="text-[8px] text-cyan-300 font-medium truncate block leading-none">
-                      {{ m.teamB?.institution || m.teamBInstitution }}
+                    <span v-if="getDisplayTeam(m, 'B').institution" class="text-[8px] text-cyan-300 font-medium truncate block leading-none">
+                      {{ getDisplayTeam(m, 'B').institution }}
                     </span>
                   </div>
                 </div>
-                <span class="font-display font-black text-xs" :class="m.winnerTeam === 'B' ? 'text-amber-300' : 'text-slate-400'">
-                  {{ m.scoreB }}
+                <span class="font-display font-black text-xs shrink-0" :class="m.winnerTeam === 'B' ? 'text-amber-300' : 'text-slate-400'">
+                  {{ isRolling ? '-' : m.scoreB }}
                 </span>
               </div>
             </div>
@@ -186,12 +200,13 @@
               :key="m.id"
               class="rounded-lg border bg-slate-950/80 px-2 py-1 flex flex-col justify-center transition shadow"
               :class="[
-                m.status === 'LIVE' ? 'border-amber-400 bg-amber-950/20 shadow-gold-glow' : 'border-slate-800'
+                isRolling ? 'border-amber-400 bg-amber-950/30 shadow-gold-glow' : (m.status === 'LIVE' ? 'border-amber-400 bg-amber-950/20 shadow-gold-glow' : 'border-slate-800')
               ]"
             >
               <div class="flex items-center justify-between text-[9px] font-bold text-slate-400 pb-0.5">
-                <span class="uppercase tracking-wider text-amber-400">MATCH #{{ m.matchOrder }}</span>
-                <span v-if="m.status === 'LIVE'" class="text-red-400 uppercase tracking-wider flex items-center gap-1 font-black">
+                <span class="uppercase tracking-wider text-amber-400 font-extrabold">MATCH #{{ m.matchOrder }}</span>
+                <span v-if="isRolling" class="text-amber-300 uppercase tracking-wider font-black animate-pulse">ROLLING...</span>
+                <span v-else-if="m.status === 'LIVE'" class="text-red-400 uppercase tracking-wider flex items-center gap-1 font-black">
                   <span class="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping"></span> LIVE {{ m.assignedCourt }}
                 </span>
                 <span v-else class="text-slate-500 uppercase">{{ m.status }}</span>
@@ -199,43 +214,43 @@
 
               <!-- Team A -->
               <div class="flex items-center justify-between py-0.5 text-xs">
-                <div class="flex items-center gap-1.5 overflow-hidden">
-                  <span class="w-4 text-[9px] font-black text-amber-400 shrink-0">{{ m.teamAShort?.slice(0, 3) || '?' }}</span>
+                <div class="flex items-center gap-1.5 overflow-hidden min-w-0 flex-1 pr-2">
+                  <span class="w-4 text-[9px] font-black text-amber-400 shrink-0">{{ getDisplayTeam(m, 'A').shortName?.slice(0, 3) || '?' }}</span>
                   <div class="truncate max-w-[155px]">
                     <span class="font-bold text-white truncate block leading-tight" :class="m.winnerTeam === 'A' ? 'text-amber-300 font-black' : ''">
-                      {{ m.teamAName || 'TBD' }}
+                      {{ getDisplayTeam(m, 'A').name || 'TBD' }}
                     </span>
-                    <span v-if="m.teamA?.institution || m.teamAInstitution" class="text-[8px] text-cyan-300 font-medium truncate block leading-none">
-                      {{ m.teamA?.institution || m.teamAInstitution }}
+                    <span v-if="getDisplayTeam(m, 'A').institution" class="text-[8px] text-cyan-300 font-medium truncate block leading-none">
+                      {{ getDisplayTeam(m, 'A').institution }}
                     </span>
                   </div>
                 </div>
-                <span class="font-display font-black text-xs" :class="m.winnerTeam === 'A' ? 'text-amber-300' : 'text-slate-400'">
-                  {{ m.scoreA }}
+                <span class="font-display font-black text-xs shrink-0" :class="m.winnerTeam === 'A' ? 'text-amber-300' : 'text-slate-400'">
+                  {{ isRolling ? '-' : m.scoreA }}
                 </span>
               </div>
 
               <!-- Team B -->
               <div class="flex items-center justify-between py-0.5 text-xs border-t border-slate-900">
-                <div class="flex items-center gap-1.5 overflow-hidden">
-                  <span class="w-4 text-[9px] font-black text-amber-400 shrink-0">{{ m.teamBShort?.slice(0, 3) || '?' }}</span>
+                <div class="flex items-center gap-1.5 overflow-hidden min-w-0 flex-1 pr-2">
+                  <span class="w-4 text-[9px] font-black text-amber-400 shrink-0">{{ getDisplayTeam(m, 'B').shortName?.slice(0, 3) || '?' }}</span>
                   <div class="truncate max-w-[155px]">
                     <span class="font-bold text-white truncate block leading-tight" :class="m.winnerTeam === 'B' ? 'text-amber-300 font-black' : ''">
-                      {{ m.teamBName || 'TBD' }}
+                      {{ getDisplayTeam(m, 'B').name || 'TBD' }}
                     </span>
-                    <span v-if="m.teamB?.institution || m.teamBInstitution" class="text-[8px] text-cyan-300 font-medium truncate block leading-none">
-                      {{ m.teamB?.institution || m.teamBInstitution }}
+                    <span v-if="getDisplayTeam(m, 'B').institution" class="text-[8px] text-cyan-300 font-medium truncate block leading-none">
+                      {{ getDisplayTeam(m, 'B').institution }}
                     </span>
                   </div>
                 </div>
-                <span class="font-display font-black text-xs" :class="m.winnerTeam === 'B' ? 'text-amber-300' : 'text-slate-400'">
-                  {{ m.scoreB }}
+                <span class="font-display font-black text-xs shrink-0" :class="m.winnerTeam === 'B' ? 'text-amber-300' : 'text-slate-400'">
+                  {{ isRolling ? '-' : m.scoreB }}
                 </span>
               </div>
             </div>
 
             <!-- PANEL KHUSUS: TIM UNGGULAN (DAPAT BYE KE ROUND OF 32) -->
-            <div v-if="byeTeamsInR32.length > 0" class="rounded-xl border border-amber-500/50 bg-gradient-to-br from-amber-950/40 via-slate-950 to-slate-950 p-2 shadow-lg mt-1">
+            <div v-if="byeTeamsInR32.length > 0" class="rounded-xl border border-amber-500/50 bg-gradient-to-br from-amber-950/40 via-slate-950 to-slate-950 p-2 shadow-lg mt-1" :class="isRolling ? 'border-amber-400 shadow-gold-glow animate-pulse' : ''">
               <div class="flex items-center justify-between pb-1 border-b border-amber-500/30">
                 <div class="flex items-center gap-1.5">
                   <Crown class="w-3.5 h-3.5 text-amber-400" />
@@ -250,16 +265,17 @@
               
               <div class="grid grid-cols-2 gap-1 pt-1.5 text-[10px]">
                 <div
-                  v-for="t in byeTeamsInR32"
-                  :key="t.id"
-                  class="flex items-center gap-1.5 p-1 rounded-md bg-black/60 border border-slate-800"
+                  v-for="(t, idx) in byeTeamsInR32"
+                  :key="t.id || idx"
+                  class="flex items-center gap-1.5 p-1 rounded-md bg-black/60 border border-slate-800 transition"
+                  :class="isRolling ? 'border-amber-400/80 bg-amber-950/30' : ''"
                 >
                   <div class="w-4 h-4 rounded bg-black flex items-center justify-center shrink-0 border border-slate-700">
-                    <span class="text-[7px] font-black text-amber-400">{{ t.shortName?.slice(0, 3) || '?' }}</span>
+                    <span class="text-[7px] font-black text-amber-400">{{ getDisplayByeTeam(t).shortName?.slice(0, 3) || '?' }}</span>
                   </div>
                   <div class="min-w-0">
-                    <span class="font-bold text-slate-200 truncate block leading-tight">{{ t.name }}</span>
-                    <span v-if="t.institution" class="text-[8px] text-cyan-400 font-medium truncate block leading-none">{{ t.institution }}</span>
+                    <span class="font-bold text-slate-200 truncate block leading-tight">{{ getDisplayByeTeam(t).name }}</span>
+                    <span v-if="getDisplayByeTeam(t).institution" class="text-[8px] text-cyan-400 font-medium truncate block leading-none">{{ getDisplayByeTeam(t).institution }}</span>
                   </div>
                 </div>
               </div>
@@ -302,13 +318,14 @@
               :key="m.id"
               class="rounded-xl border bg-slate-950/80 px-4 py-2 flex flex-col justify-between transition shadow-md relative overflow-hidden"
               :class="[
-                m.status === 'LIVE' ? 'border-2 border-amber-400 bg-amber-950/30 shadow-gold-glow scale-[1.01]' : 'border-slate-800 hover:border-slate-700'
+                isRolling ? 'border-amber-400 bg-amber-950/30 shadow-gold-glow scale-[1.01]' : (m.status === 'LIVE' ? 'border-2 border-amber-400 bg-amber-950/30 shadow-gold-glow scale-[1.01]' : 'border-slate-800 hover:border-slate-700')
               ]"
             >
               <!-- Baris Atas Info Match -->
               <div class="flex items-center justify-between text-[10px] font-bold text-slate-400 pb-1 border-b border-slate-850">
                 <span class="uppercase tracking-wider text-amber-400 font-extrabold">MATCH #{{ m.matchOrder }}</span>
-                <span v-if="m.status === 'LIVE'" class="text-red-400 uppercase tracking-widest flex items-center gap-1.5 font-black">
+                <span v-if="isRolling" class="text-amber-300 uppercase tracking-wider font-black animate-pulse">ROLLING...</span>
+                <span v-else-if="m.status === 'LIVE'" class="text-red-400 uppercase tracking-widest flex items-center gap-1.5 font-black">
                   <span class="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
                   LIVE DI {{ m.assignedCourt || 'COURT' }}
                 </span>
@@ -320,20 +337,20 @@
               <div class="flex items-center justify-between py-1 text-xs">
                 <div class="flex items-center gap-2.5 overflow-hidden min-w-0 flex-1 pr-2">
                   <div class="w-6 h-6 rounded bg-black/70 border border-slate-700 p-0.5 flex items-center justify-center shrink-0">
-                    <img v-if="m.teamALogo" :src="m.teamALogo" class="w-full h-full object-contain" />
-                    <span v-else class="text-[9px] font-black text-amber-400">{{ m.teamAShort?.slice(0, 3) || '?' }}</span>
+                    <img v-if="getDisplayTeam(m, 'A').logoUrl" :src="getDisplayTeam(m, 'A').logoUrl" class="w-full h-full object-contain" />
+                    <span v-else class="text-[9px] font-black text-amber-400">{{ getDisplayTeam(m, 'A').shortName?.slice(0, 3) || '?' }}</span>
                   </div>
                   <div class="truncate flex-1">
                     <span class="font-bold text-white truncate block leading-tight text-sm" :class="m.winnerTeam === 'A' ? 'text-amber-300 font-black' : ''">
-                      {{ m.teamAName || (m.isBye ? 'BYE' : 'TBD') }}
+                      {{ getDisplayTeam(m, 'A').name || (m.isBye ? 'BYE' : 'TBD') }}
                     </span>
-                    <span v-if="m.teamA?.institution || m.teamAInstitution" class="text-[9px] text-cyan-300 font-medium truncate block leading-none mt-0.5">
-                      {{ m.teamA?.institution || m.teamAInstitution }}
+                    <span v-if="getDisplayTeam(m, 'A').institution" class="text-[9px] text-cyan-300 font-medium truncate block leading-none mt-0.5">
+                      {{ getDisplayTeam(m, 'A').institution }}
                     </span>
                   </div>
                 </div>
                 <span class="font-display font-black text-base text-right shrink-0 w-8" :class="m.winnerTeam === 'A' ? 'text-amber-300 drop-shadow' : 'text-slate-400'">
-                  {{ m.scoreA }}
+                  {{ isRolling ? '-' : m.scoreA }}
                 </span>
               </div>
 
@@ -341,20 +358,20 @@
               <div class="flex items-center justify-between py-1 text-xs border-t border-slate-900">
                 <div class="flex items-center gap-2.5 overflow-hidden min-w-0 flex-1 pr-2">
                   <div class="w-6 h-6 rounded bg-black/70 border border-slate-700 p-0.5 flex items-center justify-center shrink-0">
-                    <img v-if="m.teamBLogo" :src="m.teamBLogo" class="w-full h-full object-contain" />
-                    <span v-else class="text-[9px] font-black text-amber-400">{{ m.teamBShort?.slice(0, 3) || '?' }}</span>
+                    <img v-if="getDisplayTeam(m, 'B').logoUrl" :src="getDisplayTeam(m, 'B').logoUrl" class="w-full h-full object-contain" />
+                    <span v-else class="text-[9px] font-black text-amber-400">{{ getDisplayTeam(m, 'B').shortName?.slice(0, 3) || '?' }}</span>
                   </div>
                   <div class="truncate flex-1">
                     <span class="font-bold text-white truncate block leading-tight text-sm" :class="m.winnerTeam === 'B' ? 'text-amber-300 font-black' : ''">
-                      {{ m.teamBName || (m.isBye ? 'BYE' : 'TBD') }}
+                      {{ getDisplayTeam(m, 'B').name || (m.isBye ? 'BYE' : 'TBD') }}
                     </span>
-                    <span v-if="m.teamB?.institution || m.teamBInstitution" class="text-[9px] text-cyan-300 font-medium truncate block leading-none mt-0.5">
-                      {{ m.teamB?.institution || m.teamBInstitution }}
+                    <span v-if="getDisplayTeam(m, 'B').institution" class="text-[9px] text-cyan-300 font-medium truncate block leading-none mt-0.5">
+                      {{ getDisplayTeam(m, 'B').institution }}
                     </span>
                   </div>
                 </div>
                 <span class="font-display font-black text-base text-right shrink-0 w-8" :class="m.winnerTeam === 'B' ? 'text-amber-300 drop-shadow' : 'text-slate-400'">
-                  {{ m.scoreB }}
+                  {{ isRolling ? '-' : m.scoreB }}
                 </span>
               </div>
             </div>
@@ -367,13 +384,14 @@
               :key="m.id"
               class="rounded-xl border bg-slate-950/80 px-4 py-2 flex flex-col justify-between transition shadow-md relative overflow-hidden"
               :class="[
-                m.status === 'LIVE' ? 'border-2 border-amber-400 bg-amber-950/30 shadow-gold-glow scale-[1.01]' : 'border-slate-800 hover:border-slate-700'
+                isRolling ? 'border-amber-400 bg-amber-950/30 shadow-gold-glow scale-[1.01]' : (m.status === 'LIVE' ? 'border-2 border-amber-400 bg-amber-950/30 shadow-gold-glow scale-[1.01]' : 'border-slate-800 hover:border-slate-700')
               ]"
             >
               <!-- Baris Atas Info Match -->
               <div class="flex items-center justify-between text-[10px] font-bold text-slate-400 pb-1 border-b border-slate-850">
                 <span class="uppercase tracking-wider text-amber-400 font-extrabold">MATCH #{{ m.matchOrder }}</span>
-                <span v-if="m.status === 'LIVE'" class="text-red-400 uppercase tracking-widest flex items-center gap-1.5 font-black">
+                <span v-if="isRolling" class="text-amber-300 uppercase tracking-wider font-black animate-pulse">ROLLING...</span>
+                <span v-else-if="m.status === 'LIVE'" class="text-red-400 uppercase tracking-widest flex items-center gap-1.5 font-black">
                   <span class="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
                   LIVE DI {{ m.assignedCourt || 'COURT' }}
                 </span>
@@ -385,20 +403,20 @@
               <div class="flex items-center justify-between py-1 text-xs">
                 <div class="flex items-center gap-2.5 overflow-hidden min-w-0 flex-1 pr-2">
                   <div class="w-6 h-6 rounded bg-black/70 border border-slate-700 p-0.5 flex items-center justify-center shrink-0">
-                    <img v-if="m.teamALogo" :src="m.teamALogo" class="w-full h-full object-contain" />
-                    <span v-else class="text-[9px] font-black text-amber-400">{{ m.teamAShort?.slice(0, 3) || '?' }}</span>
+                    <img v-if="getDisplayTeam(m, 'A').logoUrl" :src="getDisplayTeam(m, 'A').logoUrl" class="w-full h-full object-contain" />
+                    <span v-else class="text-[9px] font-black text-amber-400">{{ getDisplayTeam(m, 'A').shortName?.slice(0, 3) || '?' }}</span>
                   </div>
                   <div class="truncate flex-1">
                     <span class="font-bold text-white truncate block leading-tight text-sm" :class="m.winnerTeam === 'A' ? 'text-amber-300 font-black' : ''">
-                      {{ m.teamAName || (m.isBye ? 'BYE' : 'TBD') }}
+                      {{ getDisplayTeam(m, 'A').name || (m.isBye ? 'BYE' : 'TBD') }}
                     </span>
-                    <span v-if="m.teamA?.institution || m.teamAInstitution" class="text-[9px] text-cyan-300 font-medium truncate block leading-none mt-0.5">
-                      {{ m.teamA?.institution || m.teamAInstitution }}
+                    <span v-if="getDisplayTeam(m, 'A').institution" class="text-[9px] text-cyan-300 font-medium truncate block leading-none mt-0.5">
+                      {{ getDisplayTeam(m, 'A').institution }}
                     </span>
                   </div>
                 </div>
                 <span class="font-display font-black text-base text-right shrink-0 w-8" :class="m.winnerTeam === 'A' ? 'text-amber-300 drop-shadow' : 'text-slate-400'">
-                  {{ m.scoreA }}
+                  {{ isRolling ? '-' : m.scoreA }}
                 </span>
               </div>
 
@@ -406,20 +424,20 @@
               <div class="flex items-center justify-between py-1 text-xs border-t border-slate-900">
                 <div class="flex items-center gap-2.5 overflow-hidden min-w-0 flex-1 pr-2">
                   <div class="w-6 h-6 rounded bg-black/70 border border-slate-700 p-0.5 flex items-center justify-center shrink-0">
-                    <img v-if="m.teamBLogo" :src="m.teamBLogo" class="w-full h-full object-contain" />
-                    <span v-else class="text-[9px] font-black text-amber-400">{{ m.teamBShort?.slice(0, 3) || '?' }}</span>
+                    <img v-if="getDisplayTeam(m, 'B').logoUrl" :src="getDisplayTeam(m, 'B').logoUrl" class="w-full h-full object-contain" />
+                    <span v-else class="text-[9px] font-black text-amber-400">{{ getDisplayTeam(m, 'B').shortName?.slice(0, 3) || '?' }}</span>
                   </div>
                   <div class="truncate flex-1">
                     <span class="font-bold text-white truncate block leading-tight text-sm" :class="m.winnerTeam === 'B' ? 'text-amber-300 font-black' : ''">
-                      {{ m.teamBName || (m.isBye ? 'BYE' : 'TBD') }}
+                      {{ getDisplayTeam(m, 'B').name || (m.isBye ? 'BYE' : 'TBD') }}
                     </span>
-                    <span v-if="m.teamB?.institution || m.teamBInstitution" class="text-[9px] text-cyan-300 font-medium truncate block leading-none mt-0.5">
-                      {{ m.teamB?.institution || m.teamBInstitution }}
+                    <span v-if="getDisplayTeam(m, 'B').institution" class="text-[9px] text-cyan-300 font-medium truncate block leading-none mt-0.5">
+                      {{ getDisplayTeam(m, 'B').institution }}
                     </span>
                   </div>
                 </div>
                 <span class="font-display font-black text-base text-right shrink-0 w-8" :class="m.winnerTeam === 'B' ? 'text-amber-300 drop-shadow' : 'text-slate-400'">
-                  {{ m.scoreB }}
+                  {{ isRolling ? '-' : m.scoreB }}
                 </span>
               </div>
             </div>
@@ -493,15 +511,15 @@
                 >
                   <div class="flex items-center gap-3 overflow-hidden min-w-0 flex-1 pr-2">
                     <div class="w-9 h-9 rounded-xl bg-black/80 border border-slate-700 p-1 flex items-center justify-center shrink-0">
-                      <img v-if="m.teamALogo" :src="m.teamALogo" class="w-full h-full object-contain" />
-                      <span v-else class="text-xs font-black text-amber-400">{{ m.teamAShort?.slice(0, 3) || '?' }}</span>
+                      <img v-if="getDisplayTeam(m, 'A').logoUrl" :src="getDisplayTeam(m, 'A').logoUrl" class="w-full h-full object-contain" />
+                      <span v-else class="text-xs font-black text-amber-400">{{ getDisplayTeam(m, 'A').shortName?.slice(0, 3) || '?' }}</span>
                     </div>
                     <div class="min-w-0 flex-1">
                       <span class="text-base font-black uppercase text-white truncate block max-w-[240px]">
-                        {{ m.teamAName || (m.isBye ? 'BYE' : 'TBD') }}
+                        {{ getDisplayTeam(m, 'A').name || (m.isBye ? 'BYE' : 'TBD') }}
                       </span>
-                      <span v-if="m.teamA?.institution || m.teamAInstitution" class="text-[10px] text-cyan-300 font-semibold truncate block leading-none mt-0.5">
-                        {{ m.teamA?.institution || m.teamAInstitution }}
+                      <span v-if="getDisplayTeam(m, 'A').institution" class="text-[10px] text-cyan-300 font-semibold truncate block leading-none mt-0.5">
+                        {{ getDisplayTeam(m, 'A').institution }}
                       </span>
                     </div>
                   </div>
@@ -509,7 +527,7 @@
                     class="w-10 text-center font-display text-2xl font-black text-white shrink-0"
                     :class="m.winnerTeam === 'A' ? 'text-amber-300 drop-shadow' : 'text-slate-400'"
                   >
-                    {{ m.scoreA }}
+                    {{ isRolling ? '-' : m.scoreA }}
                   </div>
                 </div>
 
@@ -523,15 +541,15 @@
                 >
                   <div class="flex items-center gap-3 overflow-hidden min-w-0 flex-1 pr-2">
                     <div class="w-9 h-9 rounded-xl bg-black/80 border border-slate-700 p-1 flex items-center justify-center shrink-0">
-                      <img v-if="m.teamBLogo" :src="m.teamBLogo" class="w-full h-full object-contain" />
-                      <span v-else class="text-xs font-black text-amber-400">{{ m.teamBShort?.slice(0, 3) || '?' }}</span>
+                      <img v-if="getDisplayTeam(m, 'B').logoUrl" :src="getDisplayTeam(m, 'B').logoUrl" class="w-full h-full object-contain" />
+                      <span v-else class="text-xs font-black text-amber-400">{{ getDisplayTeam(m, 'B').shortName?.slice(0, 3) || '?' }}</span>
                     </div>
                     <div class="min-w-0 flex-1">
                       <span class="text-base font-black uppercase text-white truncate block max-w-[240px]">
-                        {{ m.teamBName || (m.isBye ? 'BYE' : 'TBD') }}
+                        {{ getDisplayTeam(m, 'B').name || (m.isBye ? 'BYE' : 'TBD') }}
                       </span>
-                      <span v-if="m.teamB?.institution || m.teamBInstitution" class="text-[10px] text-cyan-300 font-semibold truncate block leading-none mt-0.5">
-                        {{ m.teamB?.institution || m.teamBInstitution }}
+                      <span v-if="getDisplayTeam(m, 'B').institution" class="text-[10px] text-cyan-300 font-semibold truncate block leading-none mt-0.5">
+                        {{ getDisplayTeam(m, 'B').institution }}
                       </span>
                     </div>
                   </div>
@@ -539,7 +557,7 @@
                     class="w-10 text-center font-display text-2xl font-black text-white shrink-0"
                     :class="m.winnerTeam === 'B' ? 'text-amber-300 drop-shadow' : 'text-slate-400'"
                   >
-                    {{ m.scoreB }}
+                    {{ isRolling ? '-' : m.scoreB }}
                   </div>
                 </div>
 
@@ -576,15 +594,151 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { useRoute } from "vue-router";
 import { useBracketStore, type BracketMatchNode } from "../stores/useBracketStore";
+import { useMatchStore } from "../stores/useMatchStore";
+import { bracketAudioFX } from "../utils/bracketAudioFX";
 import { Trophy, Crown } from "lucide-vue-next";
 
 const route = useRoute();
 const bracketStore = useBracketStore();
+const matchStore = useMatchStore();
 
 const tournament = computed(() => bracketStore.tournament);
+
+// ==========================================
+// ROULETTE SYNC LIVE DRAWING DI OVERLAY OBS
+// ==========================================
+const isRolling = ref(false);
+const isStopping = ref(false);
+const rollBannerText = ref("🔴 LIVE DRAW: PENGACAKAN BAGAN TURNAMEN SEDANG BERLANGSUNG...");
+let rollTimer: any = null;
+const rollingSlots = ref<Record<string, { teamA: any; teamB: any }>>({});
+const rollingByeTeams = ref<any[]>([]);
+
+function getDisplayTeam(m: BracketMatchNode, slot: "A" | "B") {
+  if (isRolling.value && rollingSlots.value[m.id]) {
+    const r = slot === "A" ? rollingSlots.value[m.id].teamA : rollingSlots.value[m.id].teamB;
+    if (r) return r;
+  }
+  return {
+    id: slot === "A" ? m.teamAId : m.teamBId,
+    name: slot === "A" ? m.teamAName : m.teamBName,
+    shortName: slot === "A" ? m.teamAShort : m.teamBShort,
+    logoUrl: slot === "A" ? m.teamALogo : m.teamBLogo,
+    institution: slot === "A" ? (m.teamA?.institution || m.teamAInstitution) : (m.teamB?.institution || m.teamBInstitution),
+  };
+}
+
+function getDisplayByeTeam(t: any) {
+  if (isRolling.value && t?.matchId && rollingSlots.value[t.matchId]) {
+    const r = t.slot === "A" ? rollingSlots.value[t.matchId].teamA : rollingSlots.value[t.matchId].teamB;
+    if (r) return r;
+  }
+  return t;
+}
+
+function getAllTeamsPool() {
+  const allTeams: any[] = [];
+  const teamIdSet = new Set<string>();
+
+  for (const m of tournament.value?.matches || []) {
+    if (m.teamAId && !teamIdSet.has(m.teamAId)) {
+      teamIdSet.add(m.teamAId);
+      allTeams.push({
+        id: m.teamAId,
+        name: m.teamAName,
+        shortName: m.teamAShort,
+        logoUrl: m.teamALogo,
+        institution: m.teamA?.institution || m.teamAInstitution || null,
+      });
+    }
+    if (m.teamBId && !teamIdSet.has(m.teamBId)) {
+      teamIdSet.add(m.teamBId);
+      allTeams.push({
+        id: m.teamBId,
+        name: m.teamBName,
+        shortName: m.teamBShort,
+        logoUrl: m.teamBLogo,
+        institution: m.teamB?.institution || m.teamBInstitution || null,
+      });
+    }
+  }
+  return allTeams;
+}
+
+function startOverlayRoulette() {
+  const allTeams = getAllTeamsPool();
+  if (allTeams.length < 2) return;
+
+  const initialMatches = tournament.value?.matches.filter(
+    (m) => m.round === 1 || (m.round === 2 && (m.teamAId || m.teamBId))
+  ) || [];
+
+  isRolling.value = true;
+  isStopping.value = false;
+  rollBannerText.value = "🔴 LIVE DRAW: PENGACAKAN BAGAN TURNAMEN SEDANG BERLANGSUNG...";
+
+  const cycleShuffle = () => {
+    const shuffled = [...allTeams].sort(() => Math.random() - 0.5);
+    const newSlots: Record<string, { teamA: any; teamB: any }> = {};
+    let cursor = 0;
+
+    initialMatches.forEach((m) => {
+      newSlots[m.id] = {
+        teamA: m.teamAId ? (shuffled[cursor++] || null) : null,
+        teamB: m.teamBId ? (shuffled[cursor++] || null) : null,
+      };
+    });
+
+    rollingSlots.value = newSlots;
+    rollingByeTeams.value = shuffled.slice(cursor, cursor + 8);
+    bracketAudioFX.playTick(650 + Math.random() * 250);
+  };
+
+  cycleShuffle();
+  rollTimer = setInterval(cycleShuffle, 75);
+}
+
+async function stopOverlayRoulette() {
+  if (!isRolling.value || isStopping.value) return;
+  isStopping.value = true;
+  clearInterval(rollTimer);
+
+  const allTeams = getAllTeamsPool();
+  const initialMatches = tournament.value?.matches.filter(
+    (m) => m.round === 1 || (m.round === 2 && (m.teamAId || m.teamBId))
+  ) || [];
+
+  const decelSteps = [100, 140, 200, 280, 400, 580];
+  for (let i = 0; i < decelSteps.length; i++) {
+    await new Promise((resolve) => setTimeout(resolve, decelSteps[i]));
+    const shuffled = [...allTeams].sort(() => Math.random() - 0.5);
+    const newSlots: Record<string, { teamA: any; teamB: any }> = {};
+    let cursor = 0;
+
+    initialMatches.forEach((m) => {
+      newSlots[m.id] = {
+        teamA: m.teamAId ? (shuffled[cursor++] || null) : null,
+        teamB: m.teamBId ? (shuffled[cursor++] || null) : null,
+      };
+    });
+
+    rollingSlots.value = newSlots;
+    rollingByeTeams.value = shuffled.slice(cursor, cursor + 8);
+    bracketAudioFX.playTick(600 - i * 65);
+  }
+
+  bracketAudioFX.playLockChime();
+  rollBannerText.value = "🎉 PENGACAKAN SELESAI & RESMI TERKUNCI!";
+  setTimeout(() => {
+    isRolling.value = false;
+    isStopping.value = false;
+    rollingSlots.value = {};
+    rollingByeTeams.value = [];
+  }, 2500);
+}
 
 // Group matches by round for bracket
 const rounds = computed(() => {
@@ -639,7 +793,7 @@ const round1Col3 = computed(() => {
 const byeTeamsInR32 = computed(() => {
   if (!tournament.value?.matches) return [];
   const r2Matches = tournament.value.matches.filter((m) => m.round === 2);
-  const byes: { id: string; name: string; shortName: string; institution?: string | null }[] = [];
+  const byes: { id: string; name: string; shortName: string; institution?: string | null; matchId: string; slot: "A" | "B" }[] = [];
 
   for (const m of r2Matches) {
     if (m.teamAId && m.teamAName) {
@@ -650,6 +804,8 @@ const byeTeamsInR32 = computed(() => {
           name: m.teamAName,
           shortName: m.teamAShort || "",
           institution: m.teamA?.institution || m.teamAInstitution || null,
+          matchId: m.id,
+          slot: "A",
         });
       }
     }
@@ -661,6 +817,8 @@ const byeTeamsInR32 = computed(() => {
           name: m.teamBName,
           shortName: m.teamBShort || "",
           institution: m.teamB?.institution || m.teamBInstitution || null,
+          matchId: m.id,
+          slot: "B",
         });
       }
     }
@@ -806,6 +964,17 @@ const phaseBadgeClass = computed(() => {
 onMounted(async () => {
   await bracketStore.fetchActiveBracket();
   bracketStore.initSocket();
+
+  // Dengarkan event rolet pengacakan langsung dari admin
+  const s = matchStore.getSocketInstance();
+  s.off("bracket:roulette:start");
+  s.on("bracket:roulette:start", () => {
+    startOverlayRoulette();
+  });
+  s.off("bracket:roulette:stop");
+  s.on("bracket:roulette:stop", () => {
+    stopOverlayRoulette();
+  });
 });
 </script>
 
@@ -824,6 +993,16 @@ onMounted(async () => {
 .stage-fade-leave-to {
   opacity: 0;
   transform: scale(1.02);
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 
 .animate-marquee {

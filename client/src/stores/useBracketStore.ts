@@ -63,7 +63,13 @@ export const useBracketStore = defineStore("bracket", () => {
     const matchStore = useMatchStore();
     const s = matchStore.getSocketInstance();
 
-    s.emit("join:bracket", { tournamentId });
+    const join = () => {
+      s.emit("join:bracket", { tournamentId });
+    };
+
+    join();
+    s.off("connect", join);
+    s.on("connect", join);
 
     s.off("bracket:init");
     s.on("bracket:init", (data) => {
@@ -219,6 +225,18 @@ export const useBracketStore = defineStore("bracket", () => {
     return data;
   }
 
+  function emitRouletteStart() {
+    const matchStore = useMatchStore();
+    const s = matchStore.getSocketInstance();
+    s.emit("bracket:roulette:start");
+  }
+
+  function emitRouletteStop() {
+    const matchStore = useMatchStore();
+    const s = matchStore.getSocketInstance();
+    s.emit("bracket:roulette:stop");
+  }
+
   return {
     tournament,
     tournamentsList,
@@ -232,6 +250,8 @@ export const useBracketStore = defineStore("bracket", () => {
     assignMatchToCourt,
     unassignMatchFromCourt,
     finishMatch,
+    emitRouletteStart,
+    emitRouletteStop,
   };
 });
 

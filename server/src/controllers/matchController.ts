@@ -154,6 +154,20 @@ export async function setWaitingState(req: Request, res: Response) {
 export async function resetUnassignedCourts(_req: Request, res: Response) {
   try {
     matchState.resetUnassignedCourtsToWaiting();
+    const allMatches = matchState.getAllMatches();
+    for (const court of allMatches) {
+      if (court.isWaitingForNext) {
+        await prisma.bracketMatch.updateMany({
+          where: { courtMatchKey: court.matchKey, status: "LIVE" },
+          data: {
+            status: "READY",
+            assignedCourt: null,
+            courtMatchKey: null,
+          },
+        });
+      }
+    }
+    bracketService.broadcastBracket();
     return res.json({ success: true, matches: matchState.getAllMatches() });
   } catch (error) {
     return res.status(500).json({ error: "Gagal me-reset meja yang kosong." });
