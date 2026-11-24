@@ -8,6 +8,7 @@ import MatchesView from "../views/MatchesView.vue";
 import TeamsView from "../views/TeamsView.vue";
 import BracketAdminView from "../views/BracketAdminView.vue";
 import BracketOverlayView from "../views/BracketOverlayView.vue";
+import UsersView from "../views/UsersView.vue";
 
 const routes = [
   {
@@ -73,6 +74,12 @@ const routes = [
     component: BracketOverlayView,
     meta: { layout: "clean" },
   },
+  {
+    path: "/users",
+    name: "users",
+    component: UsersView,
+    meta: { requiresAuth: true, superadminOnly: true },
+  },
 ];
 
 const router = createRouter({
@@ -83,10 +90,15 @@ const router = createRouter({
 router.beforeEach((to, _from, next) => {
   const authStore = useAuthStore();
   if (to.meta.requiresAuth && !authStore.isAuthenticated()) {
-    next({ name: "login" });
-  } else {
-    next();
+    return next({ name: "login" });
   }
+
+  // Khusus rute manajemen akun & password: Hanya boleh diakses oleh SUPERADMIN
+  if (to.meta.superadminOnly && authStore.user?.role !== "SUPERADMIN") {
+    return next({ name: "admin" });
+  }
+
+  next();
 });
 
 export default router;

@@ -95,7 +95,7 @@
           class="flex-1 py-2 text-center rounded-lg transition"
           :class="activeView === 'dashboard' ? 'bg-amber-500 text-black shadow' : 'text-slate-300 hover:text-white'"
         >
-          📊 Monitoring 4 Meja Paralel
+          📊 Monitoring {{ matchStore.allMatches.length || 4 }} Meja Paralel
         </button>
         <button
           @click="activeView = 'controller'"
@@ -116,6 +116,12 @@
         >
           Database Tim
         </router-link>
+        <router-link
+          to="/users"
+          class="flex-1 py-2 text-center rounded-lg text-slate-300 hover:text-white"
+        >
+          👥 Kelola Akun
+        </router-link>
       </div>
 
       <!-- VIEW A: SUPERADMIN CENTRAL 4-COURT DASHBOARD -->
@@ -123,7 +129,7 @@
         <div class="flex items-center justify-between pb-1">
           <h2 class="text-sm font-bold text-slate-200 flex items-center gap-2">
             <LayoutGrid class="w-4 h-4 text-amber-400" />
-            <span>Pemantauan Langsung 4 Pertandingan Paralel</span>
+            <span>Pemantauan Langsung {{ matchStore.allMatches.length }} Pertandingan Paralel</span>
           </h2>
           <div class="flex items-center gap-2">
             <button
@@ -134,7 +140,7 @@
               <Clock class="w-3.5 h-3.5 text-amber-400" />
               <span>Kosongkan Meja Standby</span>
             </button>
-            <span class="text-xs text-slate-400 hidden sm:inline">Live Sync 4 Komputer</span>
+            <span class="text-xs text-slate-400 hidden sm:inline">Live Sync {{ matchStore.allMatches.length }} Komputer</span>
           </div>
         </div>
 

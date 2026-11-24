@@ -71,6 +71,16 @@ Sistem penyiaran (*broadcast*), papan skor (*scoreboard*), dan manajemen bagan t
 
 ---
 
+### 5. Manajemen Akun, Username & Password Terpusat (`/users`)
+- **Khusus Akses Superadmin:** Dilindungi dengan otorisasi ketat (`SUPERADMIN` only). Petugas wasit biasa tidak dapat membuka atau memanipulasi akun lain.
+- **Manipulasi Penuh:**
+  - **Ganti Password Cepat:** Ubah password wasit maupun admin secara instan dengan generator password acak dan tombol intip/show password.
+  - **Ubah Username & Nama:** Edit username login (misal: `@wasit1` $\to$ `@wasit_meja1`) dan nama tampilan petugas.
+  - **Tambah Petugas Baru:** Daftarkan akun wasit baru kapan saja (misal untuk Wasit Meja 5, Wasit Cadangan, atau Admin tambahan).
+  - **Hapus Akun dengan Proteksi:** Tombol hapus akun dilengkapi proteksi agar Superadmin yang sedang login tidak sengaja menghapus akunnya sendiri.
+
+---
+
 ## 📋 Daftar Rute & URL Aplikasi
 
 | Halaman | URL | Resolusi OBS | Keterangan |
@@ -78,6 +88,7 @@ Sistem penyiaran (*broadcast*), papan skor (*scoreboard*), dan manajemen bagan t
 | **Control Panel Wasit / Admin** | `/admin` | - | Dashboard kendali skor touch-friendly untuk wasit |
 | **Database Tim Preset** | `/teams` | - | Kelola tim, asal sekolah, dan Bulk Import GForm |
 | **Manajemen Bagan Turnamen** | `/bracket` | - | Atur bagan, acak tim, dan kirim match ke meja wasit |
+| **Kelola Akun & Password** | `/users` | - | Panel Superadmin untuk ubah username & reset password wasit |
 | **OBS Scoreboard Atas** | `/overlay?key=<KEY>` | `1080 x 150` | Scoreboard atas transparan MLBB style |
 | **OBS Scoreboard Bawah (Full)** | `/overlay/bottom?key=<KEY>`| `1920 x 200` | Penutup hitam layar HP full-width dengan nama sekolah |
 | **OBS Bagan Turnamen (Global)** | `/overlay/bracket` | `1920 x 1080` | Bagan adaptif otomatis (3 Kolom $\to$ Playoffs 8 Besar) |

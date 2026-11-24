@@ -42,6 +42,22 @@
     </header>
 
     <main class="max-w-5xl mx-auto w-full px-4 pt-4 flex-1 space-y-4">
+      <!-- SUB-NAV BAR (NAVIGATION TABS) -->
+      <nav class="flex items-center gap-2 p-1 bg-slate-900 rounded-xl border border-slate-800 text-xs font-bold">
+        <router-link to="/admin" class="flex-1 py-2 text-center rounded-lg text-slate-300 hover:text-white">
+          📊 Monitoring Meja
+        </router-link>
+        <router-link to="/bracket" class="flex-1 py-2 text-center rounded-lg text-slate-300 hover:text-white">
+          🏆 Bagan Turnamen
+        </router-link>
+        <div class="flex-1 py-2 text-center rounded-lg bg-amber-500 text-black font-black shadow-sm">
+          🛡️ Database Tim
+        </div>
+        <router-link to="/users" class="flex-1 py-2 text-center rounded-lg text-slate-300 hover:text-white">
+          👥 Kelola Akun
+        </router-link>
+      </nav>
+
       <!-- Search & Filter Bar -->
       <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-slate-900/60 p-3 rounded-2xl border border-slate-800/80">
         <div class="relative flex-1">

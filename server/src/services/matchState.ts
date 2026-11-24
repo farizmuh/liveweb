@@ -132,15 +132,101 @@ class MatchStateManager {
     match.updatedAt = new Date().toISOString();
   }
 
+  public broadcastOverview() {
+    if (!this.io) return;
+    this.io.to("superadmin_room").emit("matches:overview", {
+      matches: this.getAllMatches(),
+      settings: this.settings,
+    });
+  }
+
+  // Otomatis sinkronkan wasit dengan meja pertandingan (buat meja baru jika wasit belum punya meja)
+  public async syncCourtsWithReferees() {
+    try {
+      const referees = await prisma.user.findMany({
+        where: { role: "REFEREE" },
+        orderBy: { username: "asc" },
+      });
+
+      const existingMatches = await prisma.match.findMany({
+        where: { isActive: true },
+      });
+
+      let maxCourtNum = 0;
+      for (const m of existingMatches) {
+        const match = m.courtName.match(/Court\s+(\d+)/i);
+        if (match) {
+          const num = parseInt(match[1], 10);
+          if (num > maxCourtNum) maxCourtNum = num;
+        }
+      }
+
+      for (const ref of referees) {
+        const hasCourt = existingMatches.some((m) => m.assignedRefereeId === ref.id);
+        if (!hasCourt) {
+          // Cari angka dari username atau nama (misal wasit5 -> 5)
+          const numMatch = ref.username.match(/\d+/) || ref.name.match(/\d+/);
+          let courtNum = numMatch ? parseInt(numMatch[0], 10) : maxCourtNum + 1;
+
+          const isNumUsed = existingMatches.some(
+            (m) => m.courtName.toLowerCase() === `court ${courtNum}`.toLowerCase()
+          );
+          if (isNumUsed || (!numMatch && courtNum <= maxCourtNum)) {
+            maxCourtNum++;
+            courtNum = maxCourtNum;
+          } else if (courtNum > maxCourtNum) {
+            maxCourtNum = courtNum;
+          }
+
+          const courtName = `Court ${courtNum}`;
+          const matchKey = `match-c${courtNum}-${crypto.randomBytes(3).toString("hex")}`;
+
+          const created = await prisma.match.create({
+            data: {
+              courtName,
+              matchKey,
+              tournamentName: "MPL COMMUNITY CUP",
+              roundName: `MATCH ${courtNum} - REGULAR`,
+              format: "BO3",
+              teamAName: "TEAM A",
+              teamAShort: "A",
+              scoreA: 0,
+              teamBName: "TEAM B",
+              teamBShort: "B",
+              scoreB: 0,
+              assignedRefereeId: ref.id,
+              isWaitingForNext: true,
+              isActive: true,
+            },
+            include: { teamA: true, teamB: true, assignedReferee: true },
+          });
+          existingMatches.push(created);
+          console.log(`🏟️ [MatchState] Otomatis membuat meja baru: ${courtName} (${matchKey}) untuk wasit ${ref.username}`);
+        }
+      }
+    } catch (err) {
+      console.error("[MatchState] Error syncing courts with referees:", err);
+    }
+  }
+
   public async initializeFromDB() {
     try {
       this.matches.clear();
+
+      // Sinkronkan wasit dengan meja pertandingan
+      await this.syncCourtsWithReferees();
 
       // 1. Load all active matches from MySQL
       const dbMatches = await prisma.match.findMany({
         where: { isActive: true },
         include: { teamA: true, teamB: true, assignedReferee: true },
-        orderBy: { courtName: "asc" },
+      });
+
+      // Urutkan meja berdasarkan nomor court agar rapi (Court 1, Court 2, ... Court 5)
+      dbMatches.sort((a, b) => {
+        const numA = parseInt((a.courtName.match(/\d+/) || ["0"])[0], 10);
+        const numB = parseInt((b.courtName.match(/\d+/) || ["0"])[0], 10);
+        return numA - numB;
       });
 
       // Load all teams to resolve institution/details by name if direct relation was unset

@@ -18,11 +18,12 @@ dotenv.config({ path: path.resolve(process.cwd(), ".env") });
 import { setupMatchSocket } from "./sockets/matchSocket.js";
 import { matchState } from "./services/matchState.js";
 import { bracketService } from "./services/bracketService.js";
-import { requireAuth } from "./middlewares/auth.js";
+import { requireAuth, requireRole } from "./middlewares/auth.js";
 import { upload } from "./middlewares/upload.js";
 
 // Controllers
 import * as authController from "./controllers/authController.js";
+import * as userController from "./controllers/userController.js";
 import * as teamController from "./controllers/teamController.js";
 import * as matchController from "./controllers/matchController.js";
 import * as sponsorController from "./controllers/sponsorController.js";
@@ -59,9 +60,13 @@ app.use(express.urlencoded({ extended: true }));
 const uploadsPath = path.resolve(process.cwd(), "uploads");
 app.use("/uploads", express.static(uploadsPath));
 
-// Auth Routes
+// Auth & User Management Routes
 app.post("/api/auth/login", authController.login);
 app.get("/api/auth/me", requireAuth, authController.getProfile);
+app.get("/api/users", requireAuth, requireRole(["SUPERADMIN"]), userController.listUsers);
+app.post("/api/users", requireAuth, requireRole(["SUPERADMIN"]), userController.createUser);
+app.put("/api/users/:id", requireAuth, requireRole(["SUPERADMIN"]), userController.updateUser);
+app.delete("/api/users/:id", requireAuth, requireRole(["SUPERADMIN"]), userController.deleteUser);
 
 // Team Routes
 app.get("/api/teams", teamController.listTeams);
@@ -106,6 +111,7 @@ app.get("/overlay/bottom.html", (_req, res) => res.redirect("/overlay/bottom"));
 app.get("/overlay-bottom.html", (_req, res) => res.redirect("/overlay/bottom"));
 app.get("/overlay/bracket.html", (_req, res) => res.redirect("/overlay/bracket"));
 app.get("/bracket.html", (_req, res) => res.redirect("/bracket"));
+app.get("/users.html", (_req, res) => res.redirect("/users"));
 
 // Serve Frontend client build in production
 const publicFromDirname = path.resolve(__dirname, "../public");

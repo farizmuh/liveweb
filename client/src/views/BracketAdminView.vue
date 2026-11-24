@@ -71,6 +71,9 @@
         <router-link to="/teams" class="flex-1 py-2 text-center rounded-lg text-slate-300 hover:text-white">
           Database Tim
         </router-link>
+        <router-link to="/users" class="flex-1 py-2 text-center rounded-lg text-slate-300 hover:text-white">
+          👥 Kelola Akun
+        </router-link>
       </div>
 
       <!-- BRACKET CONTROLS BAR (SHUFFLE & FINALIZE) -->
