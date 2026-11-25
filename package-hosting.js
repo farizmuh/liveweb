@@ -118,6 +118,11 @@ ALTER TABLE \`Team\` DROP INDEX \`Team_name_key\`;
 `;
 fs.writeFileSync(path.resolve(outDir, "update_schema.sql"), updateSql);
 
+// Salin skema database lengkap untuk database baru di aaPanel / cPanel
+if (fs.existsSync(path.resolve(rootDir, "init_database.sql"))) {
+  fs.copyFileSync(path.resolve(rootDir, "init_database.sql"), path.resolve(outDir, "init_database.sql"));
+}
+
 // Buat file .htaccess yang efektif untuk LiteSpeed + Passenger di cPanel
 const htaccessContent = `# DO NOT REMOVE. CLOUDLINUX PASSENGER CONFIGURATION BEGIN
 PassengerAppRoot "/home/ykxyeguk/live.smekid.my.id"

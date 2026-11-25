@@ -6,7 +6,13 @@ declare global {
 }
 
 let dbUrl = process.env.DATABASE_URL;
-if (dbUrl && !dbUrl.includes("connection_limit")) {
+if (!dbUrl) {
+  console.error("=================================================================");
+  console.error("❌ ERROR FATAL: Variabel DATABASE_URL tidak ditemukan!");
+  console.error("Pastikan file '.env' sudah ada di root folder hosting/server dan");
+  console.error("berisi DATABASE_URL='mysql://USER:PASS@localhost:3306/NAMA_DB'");
+  console.error("=================================================================");
+} else if (!dbUrl.includes("connection_limit")) {
   const separator = dbUrl.includes("?") ? "&" : "?";
   dbUrl = `${dbUrl}${separator}connection_limit=3`;
 }

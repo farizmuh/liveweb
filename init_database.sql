@@ -1,0 +1,147 @@
+-- =========================================================================
+-- ESPORTS OVERLAY & TOURNAMENT BRACKET - SKEMA LENGKAP MYSQL (AAPANEL / CPANEL)
+-- Jalankan file ini di phpMyAdmin pada database baru Anda di aaPanel
+-- =========================================================================
+
+SET FOREIGN_KEY_CHECKS = 0;
+
+-- 1. Table User
+CREATE TABLE IF NOT EXISTS `User` (
+  `id` VARCHAR(191) NOT NULL PRIMARY KEY,
+  `username` VARCHAR(191) NOT NULL UNIQUE,
+  `password` VARCHAR(191) NOT NULL,
+  `name` VARCHAR(191) NOT NULL,
+  `role` ENUM('SUPERADMIN', 'REFEREE') NOT NULL DEFAULT 'REFEREE',
+  `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updatedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 2. Table Team
+CREATE TABLE IF NOT EXISTS `Team` (
+  `id` VARCHAR(191) NOT NULL PRIMARY KEY,
+  `name` VARCHAR(191) NOT NULL,
+  `shortName` VARCHAR(191) NOT NULL,
+  `logoUrl` VARCHAR(191) NULL,
+  `colorHex` VARCHAR(191) NULL DEFAULT '#2563eb',
+  `institution` VARCHAR(191) NULL,
+  `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updatedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 3. Table Tournament
+CREATE TABLE IF NOT EXISTS `Tournament` (
+  `id` VARCHAR(191) NOT NULL PRIMARY KEY,
+  `name` VARCHAR(191) NOT NULL DEFAULT 'MPL INDONESIA COMMUNITY CUP',
+  `type` ENUM('SINGLE_ELIMINATION', 'DOUBLE_ELIMINATION') NOT NULL DEFAULT 'SINGLE_ELIMINATION',
+  `status` ENUM('DRAFT', 'FINALIZED', 'IN_PROGRESS', 'COMPLETED') NOT NULL DEFAULT 'DRAFT',
+  `format` ENUM('BO1', 'BO3', 'BO5', 'BO7') NOT NULL DEFAULT 'BO3',
+  `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updatedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 4. Table BracketMatch
+CREATE TABLE IF NOT EXISTS `BracketMatch` (
+  `id` VARCHAR(191) NOT NULL PRIMARY KEY,
+  `tournamentId` VARCHAR(191) NOT NULL,
+  `round` INT NOT NULL,
+  `roundName` VARCHAR(191) NOT NULL,
+  `section` ENUM('UPPER', 'LOWER', 'GRAND_FINAL') NOT NULL DEFAULT 'UPPER',
+  `matchOrder` INT NOT NULL,
+  `teamAId` VARCHAR(191) NULL,
+  `teamAName` VARCHAR(191) NULL,
+  `teamAShort` VARCHAR(191) NULL,
+  `teamALogo` VARCHAR(191) NULL,
+  `teamAInstitution` VARCHAR(191) NULL,
+  `scoreA` INT NOT NULL DEFAULT 0,
+  `teamBId` VARCHAR(191) NULL,
+  `teamBName` VARCHAR(191) NULL,
+  `teamBShort` VARCHAR(191) NULL,
+  `teamBLogo` VARCHAR(191) NULL,
+  `teamBInstitution` VARCHAR(191) NULL,
+  `scoreB` INT NOT NULL DEFAULT 0,
+  `isBye` BOOLEAN NOT NULL DEFAULT FALSE,
+  `winnerTeam` VARCHAR(191) NULL,
+  `winnerTeamId` VARCHAR(191) NULL,
+  `status` ENUM('PENDING', 'READY', 'LIVE', 'COMPLETED') NOT NULL DEFAULT 'PENDING',
+  `nextMatchId` VARCHAR(191) NULL,
+  `nextMatchSlot` VARCHAR(191) NULL,
+  `loserMatchId` VARCHAR(191) NULL,
+  `loserMatchSlot` VARCHAR(191) NULL,
+  `assignedCourt` VARCHAR(191) NULL,
+  `courtMatchKey` VARCHAR(191) NULL,
+  `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updatedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+  CONSTRAINT `BracketMatch_tournamentId_fkey` FOREIGN KEY (`tournamentId`) REFERENCES `Tournament`(`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `BracketMatch_teamAId_fkey` FOREIGN KEY (`teamAId`) REFERENCES `Team`(`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `BracketMatch_teamBId_fkey` FOREIGN KEY (`teamBId`) REFERENCES `Team`(`id`) ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 5. Table Match
+CREATE TABLE IF NOT EXISTS `Match` (
+  `id` VARCHAR(191) NOT NULL PRIMARY KEY,
+  `matchKey` VARCHAR(191) NOT NULL UNIQUE,
+  `courtName` VARCHAR(191) NOT NULL DEFAULT 'Court 1',
+  `tournamentName` VARCHAR(191) NOT NULL DEFAULT 'MPL INDONESIA',
+  `roundName` VARCHAR(191) NOT NULL DEFAULT 'REGULAR SEASON',
+  `format` ENUM('BO1', 'BO3', 'BO5', 'BO7') NOT NULL DEFAULT 'BO3',
+  `teamAId` VARCHAR(191) NULL,
+  `teamAName` VARCHAR(191) NOT NULL DEFAULT 'BLUE TEAM',
+  `teamAShort` VARCHAR(191) NOT NULL DEFAULT 'BLUE',
+  `teamALogo` VARCHAR(191) NULL,
+  `teamAInstitution` VARCHAR(191) NULL,
+  `scoreA` INT NOT NULL DEFAULT 0,
+  `teamBId` VARCHAR(191) NULL,
+  `teamBName` VARCHAR(191) NOT NULL DEFAULT 'RED TEAM',
+  `teamBShort` VARCHAR(191) NOT NULL DEFAULT 'RED',
+  `teamBLogo` VARCHAR(191) NULL,
+  `teamBInstitution` VARCHAR(191) NULL,
+  `scoreB` INT NOT NULL DEFAULT 0,
+  `assignedRefereeId` VARCHAR(191) NULL,
+  `isActive` BOOLEAN NOT NULL DEFAULT TRUE,
+  `isCompleted` BOOLEAN NOT NULL DEFAULT FALSE,
+  `isWaitingForNext` BOOLEAN NOT NULL DEFAULT FALSE,
+  `bracketMatchId` VARCHAR(191) NULL,
+  `winnerTeam` VARCHAR(191) NULL,
+  `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updatedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+  CONSTRAINT `Match_teamAId_fkey` FOREIGN KEY (`teamAId`) REFERENCES `Team`(`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `Match_teamBId_fkey` FOREIGN KEY (`teamBId`) REFERENCES `Team`(`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `Match_assignedRefereeId_fkey` FOREIGN KEY (`assignedRefereeId`) REFERENCES `User`(`id`) ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 6. Table Sponsor
+CREATE TABLE IF NOT EXISTS `Sponsor` (
+  `id` VARCHAR(191) NOT NULL PRIMARY KEY,
+  `name` VARCHAR(191) NOT NULL,
+  `logoUrl` VARCHAR(191) NULL,
+  `order` INT NOT NULL DEFAULT 0,
+  `isActive` BOOLEAN NOT NULL DEFAULT TRUE,
+  `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updatedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 7. Table Setting
+CREATE TABLE IF NOT EXISTS `Setting` (
+  `id` VARCHAR(191) NOT NULL DEFAULT 'global_config' PRIMARY KEY,
+  `tickerText` VARCHAR(191) NOT NULL DEFAULT 'Welcome to the Tournament! • Subscribe & Follow our Social Media',
+  `showTicker` BOOLEAN NOT NULL DEFAULT TRUE,
+  `showSponsor` BOOLEAN NOT NULL DEFAULT FALSE,
+  `updatedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- SEED DATA AWAL: Akun Default (Password: admin123 untuk admin, wasit123 untuk wasit)
+INSERT INTO `User` (`id`, `username`, `password`, `name`, `role`, `createdAt`, `updatedAt`) VALUES
+('user-admin-01', 'admin', '$2a$10$Gn8bHOp8k9vP8nB3yA1xFeIF/nZjMZkyJ0nEUSVVbWYkgDM7LKzay', 'Head Referee (Superadmin)', 'SUPERADMIN', NOW(), NOW()),
+('user-wasit-01', 'wasit1', '$2a$10$mokdpGjBB5d.mp.D3pOHd..7nEX483uw7V0vv79nNj7Fa4au0W0A2', 'Wasit Meja 1', 'REFEREE', NOW(), NOW()),
+('user-wasit-02', 'wasit2', '$2a$10$mokdpGjBB5d.mp.D3pOHd..7nEX483uw7V0vv79nNj7Fa4au0W0A2', 'Wasit Meja 2', 'REFEREE', NOW(), NOW()),
+('user-wasit-03', 'wasit3', '$2a$10$mokdpGjBB5d.mp.D3pOHd..7nEX483uw7V0vv79nNj7Fa4au0W0A2', 'Wasit Meja 3', 'REFEREE', NOW(), NOW()),
+('user-wasit-04', 'wasit4', '$2a$10$mokdpGjBB5d.mp.D3pOHd..7nEX483uw7V0vv79nNj7Fa4au0W0A2', 'Wasit Meja 4', 'REFEREE', NOW(), NOW()),
+('user-wasit-05', 'wasit5', '$2a$10$mokdpGjBB5d.mp.D3pOHd..7nEX483uw7V0vv79nNj7Fa4au0W0A2', 'Wasit Meja 5', 'REFEREE', NOW(), NOW())
+ON DUPLICATE KEY UPDATE `password`=VALUES(`password`), `name`=VALUES(`name`);
+
+-- Setting Awal
+INSERT INTO `Setting` (`id`, `tickerText`, `showTicker`, `showSponsor`, `updatedAt`)
+VALUES ('global_config', 'Official Esports Tournament Live Broadcast • Follow our Social Media Channels!', 1, 0, NOW())
+ON DUPLICATE KEY UPDATE `id`=VALUES(`id`);
+
+SET FOREIGN_KEY_CHECKS = 1;

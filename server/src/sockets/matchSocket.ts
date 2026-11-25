@@ -44,9 +44,13 @@ export function setupMatchSocket(io: SocketIOServer) {
 
     // 3. Client joins bracket room (for OBS bracket overlay or Admin bracket view)
     socket.on("join:bracket", async ({ tournamentId }: { tournamentId?: string }) => {
-      socket.join("bracket_room");
-      const tournament = await bracketService.getTournamentBracket(tournamentId);
-      socket.emit("bracket:init", { tournament });
+      try {
+        socket.join("bracket_room");
+        const tournament = await bracketService.getTournamentBracket(tournamentId);
+        socket.emit("bracket:init", { tournament });
+      } catch (err) {
+        console.error("[Socket Error] Gagal memuat bagan di join:bracket:", err);
+      }
     });
 
     // 3b. Sinkronisasi Live Rolet Pengacakan Tim antara Admin & OBS Overlay
@@ -60,10 +64,14 @@ export function setupMatchSocket(io: SocketIOServer) {
 
     // 4. Score Actions scoped by matchKey
     socket.on("score:change", async ({ matchKey, team, delta }: { matchKey: string; team: "A" | "B"; delta: number }) => {
-      if (!matchKey) return;
-      matchState.updateScore(matchKey, team, delta);
-      // Synchronize live score to bracket if match is linked
-      await bracketService.syncLiveScoreFromCourt(matchKey);
+      try {
+        if (!matchKey) return;
+        matchState.updateScore(matchKey, team, delta);
+        // Synchronize live score to bracket if match is linked
+        await bracketService.syncLiveScoreFromCourt(matchKey);
+      } catch (err) {
+        console.error("[Socket Error] Gagal update score:", err);
+      }
     });
 
     socket.on("score:reset", ({ matchKey }: { matchKey: string }) => {
@@ -82,37 +90,45 @@ export function setupMatchSocket(io: SocketIOServer) {
     });
 
     socket.on("court:set-waiting", async ({ matchKey, isWaiting }: { matchKey: string; isWaiting: boolean }) => {
-      if (!matchKey) return;
-      matchState.setCourtWaitingState(matchKey, isWaiting);
-      if (isWaiting) {
-        await prisma.bracketMatch.updateMany({
-          where: { courtMatchKey: matchKey, status: "LIVE" },
-          data: {
-            status: "READY",
-            assignedCourt: null,
-            courtMatchKey: null,
-          },
-        });
-        bracketService.broadcastBracket();
-      }
-    });
-
-    socket.on("courts:reset-unassigned", async () => {
-      matchState.resetUnassignedCourtsToWaiting();
-      const allMatches = matchState.getAllMatches();
-      for (const court of allMatches) {
-        if (court.isWaitingForNext) {
+      try {
+        if (!matchKey) return;
+        matchState.setCourtWaitingState(matchKey, isWaiting);
+        if (isWaiting) {
           await prisma.bracketMatch.updateMany({
-            where: { courtMatchKey: court.matchKey, status: "LIVE" },
+            where: { courtMatchKey: matchKey, status: "LIVE" },
             data: {
               status: "READY",
               assignedCourt: null,
               courtMatchKey: null,
             },
           });
+          bracketService.broadcastBracket();
         }
+      } catch (err) {
+        console.error("[Socket Error] Gagal set court waiting:", err);
       }
-      bracketService.broadcastBracket();
+    });
+
+    socket.on("courts:reset-unassigned", async () => {
+      try {
+        matchState.resetUnassignedCourtsToWaiting();
+        const allMatches = matchState.getAllMatches();
+        for (const court of allMatches) {
+          if (court.isWaitingForNext) {
+            await prisma.bracketMatch.updateMany({
+              where: { courtMatchKey: court.matchKey, status: "LIVE" },
+              data: {
+                status: "READY",
+                assignedCourt: null,
+                courtMatchKey: null,
+              },
+            });
+          }
+        }
+        bracketService.broadcastBracket();
+      } catch (err) {
+        console.error("[Socket Error] Gagal reset unassigned courts:", err);
+      }
     });
 
     socket.on("settings:update", (newSettings) => {
