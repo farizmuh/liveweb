@@ -1,6 +1,49 @@
 # 🎮 Esports Real-Time Scoreboard, Tournament Bracket & OBS Overlay (MLBB Style)
 
+![License](https://img.shields.io/badge/License-MIT-blue.svg)
+![Vue 3](https://img.shields.io/badge/Vue-3.5-emerald.svg)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue.svg)
+![Express](https://img.shields.io/badge/Express-4.21-lightgrey.svg)
+![Socket.io](https://img.shields.io/badge/Socket.io-4.8-orange.svg)
+![Prisma](https://img.shields.io/badge/Prisma-5.22-darkblue.svg)
+![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3.4-cyan.svg)
+
 Sistem penyiaran (*broadcast*), papan skor (*scoreboard*), dan manajemen bagan turnamen (*tournament bracket*) profesional bertema **Mobile Legends: Bang Bang (MLBB)**. Dirancang khusus untuk turnamen komunitas, sekolah (SMP/SMA/SMK), maupun turnamen umum berskala besar (hingga 57+ tim) dengan sinkronisasi real-time berlatensi ultra-rendah (<10ms) via Socket.io.
+
+---
+
+## 📸 Tangkapan Layar Aplikasi (Showcase)
+
+### 1. OBS Broadcast Overlays (Siaran Resmi)
+
+| Bagan Fase Penyisihan (3 Kolom Grid - 57 Tim) | Bagan Fase Playoffs (8 Besar $\to$ Grand Final & Juara 3) |
+|:---:|:---:|
+| ![Bagan Penyisihan OBS](docs/screenshots/overlay-bracket-round1.jpg) | ![Bagan Playoffs OBS](docs/screenshots/overlay-bracket-playoffs.jpg) |
+| *Otomatis muat 57 tim tanpa scrollbar di layar 1080p* | *Bagan pohon 8 besar, perebutan juara 3, & grand finals* |
+
+| Scoreboard Bawah OBS (1920 x 200 - Penutup Layar Hitam HP) |
+|:---:|
+| ![OBS Scoreboard Bawah](docs/screenshots/overlay-scoreboard-bottom.png) |
+| *Menutup 100% border hitam layar HP 20:9 dengan logo tim, skor jumbo, gems, running ticker, & nama sekolah* |
+
+---
+
+### 2. Panel Kendali Admin & Wasit (Control Panel)
+
+| Pemantauan Multi-Meja Paralel (5 Meja) | Manajemen Bagan Turnamen & Acak Tim |
+|:---:|:---:|
+| ![Monitoring Meja](docs/screenshots/admin-monitoring-courts.png) | ![Manajemen Bagan](docs/screenshots/admin-bracket-management.jpg) |
+| *Monitoring 5 meja simultan dengan status live & standby* | *Acak tim dengan animasi rolet live ke overlay, kirim ke meja* |
+
+| Kelola Akun & Reset Password Wasit (`/users`) | Kontrol Detail Match Wasit (Touch-Friendly) |
+|:---:|:---:|
+| ![Kelola Akun](docs/screenshots/admin-users-management.png) | ![Kontrol Skor Wasit](docs/screenshots/admin-match-control.png) |
+| *Ubah username, reset password instan, & tambah wasit baru* | *Pengaturan skor, first pick, side swap, pause, & game winner* |
+
+| Database Tim Preset & Bulk Import Google Form (`/teams`) |
+|:---:|
+| ![Database Tim](docs/screenshots/admin-teams-database.png) |
+| *Manajemen tim, asal sekolah, tag singkatan, & import massal dari spreadsheet* |
 
 ---
 
@@ -27,18 +70,22 @@ Sistem penyiaran (*broadcast*), papan skor (*scoreboard*), dan manajemen bagan t
 
 ---
 
-### 2. Sistem Bagan Turnamen Otomatis & Skala Besar (`/bracket` & `/overlay/bracket`)
-- **Mendukung Hingga 57+ Tim:**
-  - **Babak 1 (Penyisihan / Play-in):** 50 tim (25 match).
-  - **7 Tim Unggulan (BYE):** Otomatis langsung menunggu di babak utama *Round of 32*.
+### 2. Sistem Bagan Turnamen Otomatis & Adaptif (`/bracket` & `/overlay/bracket`)
+- **Mendukung Segala Skala Turnamen (12 Tim hingga 57+ Tim):**
+  - **Bagan Turnamen Sedang (<= 4 Ronde / misal 12–16 Tim):** Otomatis menampilkan seluruh pohon bagan 4 kolom sekaligus (*Round 1 $\to$ Quarterfinals $\to$ Semifinals $\to$ Grand Finals & Juara 3*) dalam 1 layar proporsional.
+  - **Bagan Raksasa (57 Tim / 6 Ronde):**
+    - **Babak 1 (Penyisihan / Play-in):** 50 tim (25 match).
+    - **7 Tim Unggulan (BYE):** Otomatis langsung menunggu di babak utama *Round of 32*.
 - **Tampilan OBS Adaptif Otomatis (1 Link Terpusat Tanpa Ganti URL):**
   - Cukup gunakan 1 link terpusat `http://localhost:3000/overlay/bracket` di OBS Browser Source.
-  - **Tahap 1 (Saat Babak 1 Aktif):** Otomatis menampilkan **Grid 3 Kolom (25 match + box tim unggulan)**. Semua 57 tim muat pas dalam 1 layar 1080p tanpa scrollbar (seperti SS 2).
+  - **Tahap 1 (Saat Babak 1 Aktif):** Otomatis menampilkan **Grid 3 Kolom (25 match + box tim unggulan)**. Semua 57 tim muat pas dalam 1 layar 1080p tanpa scrollbar.
   - **Tahap 2 (Saat Masuk Babak 32 Besar & 16 Besar):** Otomatis menampilkan **Grid 2 Kolom Luas** untuk ronde yang sedang aktif sehingga kartu match proporsional, nama sekolah/logo terbaca jelas, dan tidak ada scrollbar.
-  - **Tahap 3 (Saat Masuk Quarterfinals / 8 Besar):** Otomatis bertransisi mulus ke **Bagan Pohon Playoffs (Quarterfinals $\to$ Semifinals $\to$ Grand Finals & Perebutan Juara 3)** seperti SS 3 hingga penobatan juara.
+  - **Tahap 3 (Saat Masuk Quarterfinals / 8 Besar):** Otomatis bertransisi mulus ke **Bagan Pohon Playoffs (Quarterfinals $\to$ Semifinals $\to$ Grand Finals & Perebutan Juara 3)** hingga penobatan juara.
   - **Pertandingan Perebutan Juara 3 (Bronze Match):** Tim yang gugur di Semifinal 1 dan Semifinal 2 otomatis melaju ke perebutan Juara 3 berdampingan dengan Grand Finals (beraksen Perunggu/Bronze) dan dapat disiarkan serta ditugaskan ke meja secara mandiri.
   - Tampilan overlay 100% bersih untuk siaran resmi tanpa tombol kontrol klik yang mengganggu di layar OBS.
-- **Fitur Kontrol Bagan:** Acak susunan tim (*Random Shuffle*), finalisasi bagan (*Finalize*), kirim pertandingan ke meja wasit (*Assign to Court*), dan sinkronisasi skor live.
+- **Fitur Acak Tim (Live Roulette Drawing):**
+  - Tombol *"Acak Tim (Rolet)"* di admin memutar animasi drawing acak dengan efek suara audio FX secara real-time langsung ke layar OBS penonton turnamen sebelum bagan dikunci (*Finalized*).
+- **Fitur Kontrol Bagan:** Kirim pertandingan ke meja wasit (*Assign to Court*), tarik dari meja (*Unassign*), dan pemenang otomatis maju ke ronde berikutnya (*Auto-Advance Bracket*).
 
 ---
 
@@ -54,19 +101,21 @@ Sistem penyiaran (*broadcast*), papan skor (*scoreboard*), dan manajemen bagan t
 
 ---
 
-### 4. Sistem Siaran Paralel Multi-Meja (4+ Courts)
-- Mendukung 4 meja pertandingan atau lebih yang berjalan simultan tanpa bentrok (*zero cross-talk*).
+### 4. Sistem Siaran Paralel Multi-Meja (5+ Courts)
+- Mendukung 5 meja pertandingan atau lebih yang berjalan simultan tanpa bentrok (*zero cross-talk*).
+- **Sinkronisasi Meja Otomatis:** Menambahkan akun wasit baru (misal `wasit5`, `wasit6`) otomatis membuat meja pertandingan baru di sistem.
 - **Format Stream Key Mandiri:**
   - Meja 1: `.../overlay/bottom?key=match-c1-8f3a9b`
   - Meja 2: `.../overlay/bottom?key=match-c2-7d2e4c`
   - Meja 3: `.../overlay/bottom?key=match-c3-5a1b9f`
   - Meja 4: `.../overlay/bottom?key=match-c4-3e9d8a`
+  - Meja 5: `.../overlay/bottom?key=match-c5-5c8642`
 - **Dashboard Superadmin:** Memantau dan mengendalikan semua meja pertandingan dari 1 layar.
 - **Panel Wasit Spesifik:** Setiap wasit memiliki login sendiri yang otomatis terhubung ke meja tugasnya.
 - **Status Meja Siap (Standby):** Saat pertandingan selesai, meja otomatis dikosongkan dan overlay menampilkan status *"MENUNGGU MATCH BERIKUTNYA • MEJA SIAP"*.
 - **Sistem Anti-Tumpuk Meja (Court Conflict Prevention):**
   - Meja yang sedang aktif bertanding otomatis berstatus `🔴 (SEDANG AKTIF)` dan **dikunci (disabled) di dropdown bagan** sehingga tidak bisa tertumpuk.
-  - Backend memvalidasi dan menolak keras jika ada penugasan baru ke meja yang sedang aktif bertanding.
+  - Backend memvalidasi dan menolak jika ada penugasan baru ke meja yang sedang aktif bertanding.
   - **Fitur Tarik dari Meja:** Tombol *"Tarik dari Meja"* pada node bagan berstatus LIVE memungkinkan panitia membatalkan penugasan meja kapan saja dan mengembalikan pertandingan ke status Siap (*Ready*) tanpa merusak data.
 
 ---
@@ -78,6 +127,7 @@ Sistem penyiaran (*broadcast*), papan skor (*scoreboard*), dan manajemen bagan t
   - **Ubah Username & Nama:** Edit username login (misal: `@wasit1` $\to$ `@wasit_meja1`) dan nama tampilan petugas.
   - **Tambah Petugas Baru:** Daftarkan akun wasit baru kapan saja (misal untuk Wasit Meja 5, Wasit Cadangan, atau Admin tambahan).
   - **Hapus Akun dengan Proteksi:** Tombol hapus akun dilengkapi proteksi agar Superadmin yang sedang login tidak sengaja menghapus akunnya sendiri.
+  - **Auto Session Recovery:** Dilengkapi tombol logout mandiri dan pengalihan otomatis ke halaman login jika token sesi telah kedaluwarsa.
 
 ---
 
@@ -87,7 +137,7 @@ Sistem penyiaran (*broadcast*), papan skor (*scoreboard*), dan manajemen bagan t
 |---|---|---|---|
 | **Control Panel Wasit / Admin** | `/admin` | - | Dashboard kendali skor touch-friendly untuk wasit |
 | **Database Tim Preset** | `/teams` | - | Kelola tim, asal sekolah, dan Bulk Import GForm |
-| **Manajemen Bagan Turnamen** | `/bracket` | - | Atur bagan, acak tim, dan kirim match ke meja wasit |
+| **Manajemen Bagan Turnamen** | `/bracket` | - | Atur bagan, acak tim (rolet), dan kirim match ke meja |
 | **Kelola Akun & Password** | `/users` | - | Panel Superadmin untuk ubah username & reset password wasit |
 | **OBS Scoreboard Atas** | `/overlay?key=<KEY>` | `1080 x 150` | Scoreboard atas transparan MLBB style |
 | **OBS Scoreboard Bawah (Full)** | `/overlay/bottom?key=<KEY>`| `1920 x 200` | Penutup hitam layar HP full-width dengan nama sekolah |
@@ -141,7 +191,7 @@ Folder proyek sudah dilengkapi file `.bat` siap pakai tanpa perlu menghafal peri
 
 ## 🌐 Panduan Upload ke Server Hosting (cPanel)
 
-Paket hosting menggunakan **Phusion Passenger / LiteSpeed** yang dioptimalkan agar ringan (~25MB) dan tidak memerlukan build di server hosting:
+Paket hosting menggunakan **Phusion Passenger / LiteSpeed** yang dioptimalkan agar ringan (~20MB) dan tidak memerlukan proses build berat di server hosting:
 
 1. **Buat File ZIP di Komputer:**
    Jalankan file [build-hosting.bat](file:///d:/ngoding/liveweb/build-hosting.bat) atau ketik `npm run build:hosting`. File `deploy_hosting.zip` akan otomatis terbuat.
@@ -156,11 +206,11 @@ Paket hosting menggunakan **Phusion Passenger / LiteSpeed** yang dioptimalkan ag
    ALTER TABLE `Team` DROP INDEX `Team_name_key`;
    ```
 3. **Upload & Ekstrak di File Manager:**
-   Upload file `deploy_hosting.zip` ke folder domain (contoh: `/home/ykxyeguk/live.smekid.my.id`) $\to$ klik kanan $\to$ **Extract**.
-   *(File konfigurasi `.env` Anda yang lama tetap aman dan tidak akan tertimpa).*
-4. **Restart Aplikasi:**
+   - Hapus folder `public` dan `dist` lama di folder domain (misal: `/home/ykxyeguk/live.smekid.my.id`).
+   - Upload file `deploy_hosting.zip` $\to$ klik kanan $\to$ **Extract** langsung di root domain.
+4. **Restart Aplikasi di cPanel:**
    Buka menu **Setup Node.js App** di cPanel $\to$ klik tombol **Restart**.
-5. **Selesai!** Website dan overlay langsung aktif di domain Anda.
+5. **Selesai!** Website dan seluruh link overlay langsung aktif di domain hosting Anda.
 
 ---
 
@@ -171,6 +221,7 @@ Paket hosting menggunakan **Phusion Passenger / LiteSpeed** yang dioptimalkan ag
 * **Wasit Meja 2:** `wasit2` / `wasit123`
 * **Wasit Meja 3:** `wasit3` / `wasit123`
 * **Wasit Meja 4:** `wasit4` / `wasit123`
+* **Wasit Meja 5:** `wasit5` / `wasit123`
 
 ---
 
@@ -178,6 +229,9 @@ Paket hosting menggunakan **Phusion Passenger / LiteSpeed** yang dioptimalkan ag
 
 ```plaintext
 liveweb/
+├── docs/
+│   └── screenshots/      # Tangkapan layar antarmuka & OBS overlay
+│
 ├── server/               # Express.js + Socket.io + Prisma ORM
 │   ├── prisma/
 │   │   ├── schema.prisma # Model User, Team, Match, BracketMatch, Sponsor, Setting
@@ -185,14 +239,14 @@ liveweb/
 │   ├── uploads/          # Direktori penyimpanan logo tim
 │   └── src/
 │       ├── services/     # In-memory matchState & bracketService
-│       ├── controllers/  # teamController, matchController, bracketController
-│       └── index.ts      # Server entry point
+│       ├── controllers/  # userController, teamController, matchController, bracketController
+│       └── index.ts      # Server entry point (Passenger & Standalone socket support)
 │
 ├── client/               # Vue 3 + Tailwind CSS + Pinia + Lucide Icons + Vite
 │   └── src/
 │       ├── components/   # ScoreController, MatchConfigForm, GemPoints, WinnerOverlay
-│       ├── stores/       # useMatchStore, useTeamStore, useBracketStore, useAuthStore
-│       └── views/        # TeamsView, AdminView, BottomOverlayView, OverlayView, BracketOverlayView
+│       ├── stores/       # useMatchStore, useTeamStore, useBracketStore, useAuthStore, useUserStore
+│       └── views/        # AdminView, BracketAdminView, BracketOverlayView, UsersView, TeamsView, OverlayView
 │
 ├── package-hosting.js    # Script otomatis bundler cPanel hosting
 ├── build-hosting.bat     # Shortcut pembuatan deploy_hosting.zip
