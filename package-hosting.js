@@ -143,7 +143,7 @@ PassengerAppLogFile "/home/ykxyeguk/live.smekid.my.id/passenger.log"
 # Resource Limits
 PassengerMaxInstances 1
 PassengerMinInstances 1
-PassengerPoolIdleTime 0
+PassengerPoolIdleTime 30
 PassengerMaxRequestQueueSize 100
 PassengerFriendlyErrorPages on
 

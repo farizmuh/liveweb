@@ -150,11 +150,29 @@ async function startServer() {
     console.error("[BracketService] Sync error (non-fatal, server tetap berjalan):", err);
   }
 
-  // Phusion Passenger di cPanel binding ke port yang diberikan via env
-  // atau ke socket file. Kita gunakan PORT yang sudah diset.
-  const listenTarget = process.env.PASSENGER_LISTEN_SOCKET || PORT;
-  
-  server.listen(listenTarget as any, () => {
+  // Deteksi lingkungan cPanel Phusion Passenger vs Localhost
+  // PENTING: Di cPanel Passenger, wajib menggunakan socket 'passenger' atau env PORT dari Passenger
+  // agar tidak bentrok di port 3000 dan tidak memicu penumpukan proses zombie (100/100 NPROC)
+  let listenTarget: any = PORT;
+  if (typeof (globalThis as any).PhusionPassenger !== "undefined") {
+    listenTarget = "passenger";
+  } else if (process.env.PASSENGER_APP_ENV || process.env.PASSENGER_BASE_URI) {
+    listenTarget = process.env.PORT || "passenger";
+  } else if (process.env.PASSENGER_LISTEN_SOCKET) {
+    listenTarget = process.env.PASSENGER_LISTEN_SOCKET;
+  }
+
+  // Tangani error port bentrok (EADDRINUSE) secara tegas
+  server.on("error", (err: any) => {
+    console.error("[Server Error]", err);
+    if (err.code === "EADDRINUSE") {
+      console.error(`[Server Anti-Zombie] Port/Socket ${listenTarget} sudah terpakai oleh proses lain! Menghentikan proses ini agar tidak menumpuk...`);
+      // Wajib exit jika port sudah diambil proses lain agar tidak jadi proses zombie di cPanel
+      process.exit(1);
+    }
+  });
+
+  server.listen(listenTarget, () => {
     console.log(`=======================================================`);
     console.log(`🎮 ESPORTS OVERLAY SERVER RUNNING`);
     console.log(`📡 Listening on: ${listenTarget}`);
@@ -164,9 +182,12 @@ async function startServer() {
   });
 }
 
-// Tangkal crash loop agar Passenger tidak men-spawn puluhan proses liar
-process.on("uncaughtException", (err) => {
+// Tangkal crash loop & cegah proses zombie
+process.on("uncaughtException", (err: any) => {
   console.error("[Server Anti-Crash] Uncaught Exception:", err);
+  if (err?.code === "EADDRINUSE") {
+    process.exit(1);
+  }
 });
 
 process.on("unhandledRejection", (reason) => {

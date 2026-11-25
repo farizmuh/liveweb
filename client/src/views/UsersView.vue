@@ -19,7 +19,7 @@
           </div>
         </div>
 
-        <!-- Tombol Tambah Akun Baru -->
+        <!-- Tombol Tambah Akun Baru & Logout -->
         <div class="flex items-center gap-2">
           <button
             @click="openCreateModal"
@@ -27,6 +27,15 @@
           >
             <UserPlus class="w-4 h-4 text-black" />
             <span>Tambah Akun Baru</span>
+          </button>
+
+          <!-- Logout Button -->
+          <button
+            @click="handleLogout"
+            class="p-2 rounded-xl bg-slate-800 hover:bg-red-900/60 text-slate-400 hover:text-red-300 border border-slate-700 active:scale-95 transition"
+            title="Keluar / Logout"
+          >
+            <LogOut class="w-4 h-4" />
           </button>
         </div>
       </div>
@@ -478,6 +487,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
+import { useRouter } from "vue-router";
 import { useAuthStore } from "../stores/useAuthStore";
 import { useUserStore, type ManagedUser } from "../stores/useUserStore";
 import {
@@ -497,8 +507,10 @@ import {
   Shuffle,
   CheckCircle2,
   AlertCircle,
+  LogOut,
 } from "lucide-vue-next";
 
+const router = useRouter();
 const authStore = useAuthStore();
 const userStore = useUserStore();
 
@@ -535,9 +547,21 @@ onMounted(async () => {
   try {
     await userStore.fetchUsers();
   } catch (err: any) {
-    showNotification(err.message || "Gagal memuat pengguna.", "error");
+    const msg = err.message || "Gagal memuat pengguna.";
+    showNotification(msg, "error");
+    if (msg.includes("Sesi") || msg.includes("kedaluwarsa") || msg.includes("Akses ditolak") || msg.includes("401")) {
+      setTimeout(() => {
+        authStore.logout();
+        router.push("/login");
+      }, 1500);
+    }
   }
 });
+
+function handleLogout() {
+  authStore.logout();
+  router.push("/login");
+}
 
 function isCurrentUser(userId: string): boolean {
   return authStore.user?.id === userId;

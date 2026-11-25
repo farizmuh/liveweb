@@ -468,12 +468,16 @@
           </div>
         </div>
 
-        <!-- 3 KOLOM BESAR & GAGAH (QF -> SF -> GF) -->
-        <div class="flex-1 flex items-stretch justify-around gap-8 overflow-hidden py-2">
+        <!-- KOLOM BRACKET / PLAYOFFS (ADAPTIF 3 ATAU 4 KOLOM) -->
+        <div
+          class="flex-1 flex items-stretch justify-around overflow-hidden py-2"
+          :class="playoffsRounds.length > 3 ? 'gap-5' : 'gap-8'"
+        >
           <div
             v-for="roundObj in playoffsRounds"
             :key="roundObj.round"
-            class="flex-1 flex flex-col h-full justify-between max-w-[500px]"
+            class="flex-1 flex flex-col h-full justify-between"
+            :class="playoffsRounds.length > 3 ? 'max-w-[430px]' : 'max-w-[500px]'"
           >
             <!-- Header Babak -->
             <div class="text-center pb-2 shrink-0">
@@ -849,7 +853,7 @@ const byeTeamsInR32 = computed(() => {
   return byes;
 });
 
-// Ronde aktif sebelum Quarterfinals (Round of 32 atau Round of 16)
+// Ronde aktif sebelum Quarterfinals (Round 1, Round of 32 atau Round of 16)
 const currentGridRound = computed(() => {
   if (!tournament.value?.matches || rounds.value.length === 0) return null;
 
@@ -857,14 +861,21 @@ const currentGridRound = computed(() => {
     (r) => r.name.toLowerCase().includes("quarterfinal") || (rounds.value.length >= 3 && r.round === rounds.value.length - 2)
   );
 
-  if (rounds.value.length <= 3) return null;
-
   const preQfRounds = qfRound ? rounds.value.filter((r) => r.round < qfRound.round) : rounds.value.slice(0, -3);
 
-  // Cari ronde terawal yang BELUM 100% selesai (skip Round 1 jika R1 ditangani view khusus)
-  const nonR1PreQf = preQfRounds.filter((r) => r.round > 1);
-  const active = nonR1PreQf.find((r) => r.matches.some((m) => m.status !== "COMPLETED"));
-  return active || nonR1PreQf[nonR1PreQf.length - 1] || null;
+  if (preQfRounds.length === 0) {
+    return rounds.value[0] || null;
+  }
+
+  // Jika Round 1 memiliki > 8 match, ia ditangani khusus oleh view 'round1'.
+  // Tapi jika Round 1 memiliki <= 8 match, ia ditangani di sini (grid-active)!
+  const eligiblePreQf = round1Matches.value.length > 8
+    ? preQfRounds.filter((r) => r.round > 1)
+    : preQfRounds;
+
+  const listToSearch = eligiblePreQf.length > 0 ? eligiblePreQf : preQfRounds;
+  const active = listToSearch.find((r) => r.matches.some((m) => m.status !== "COMPLETED"));
+  return active || listToSearch[listToSearch.length - 1] || rounds.value[0] || null;
 });
 
 // Jumlah match yang selesai di ronde grid aktif
@@ -905,9 +916,12 @@ const allTournamentTeams = computed(() => {
   return Array.from(map.values());
 });
 
-// 3 Ronde Terakhir untuk Babak 8 Besar / Playoffs (Quarterfinals -> Semifinals -> Grand Finals)
+// Ronde untuk Babak Playoffs / Tree
 const playoffsRounds = computed(() => {
-  if (rounds.value.length <= 3) return rounds.value;
+  // Jika turnamen memiliki <= 4 ronde (misal R1 4 match -> QF 4 match -> SF 2 match -> GF 2 match):
+  // Tampilkan SEMUA ronde (4 kolom) agar seluruh bagan utuh terlihat dari awal sampai akhir!
+  if (rounds.value.length <= 4) return rounds.value;
+  // Jika turnamen besar (5 atau 6 ronde seperti 57 tim): ambil 3 ronde terakhir (QF, SF, GF)
   return rounds.value.slice(-3);
 });
 
@@ -918,19 +932,23 @@ const maxRoundNumber = computed(() => {
 
 // ==============================================================
 // 🧠 LOGIKA PINTAR OTOMATIS (SMART STAGE DETECTION):
-// 1. Round 1 belum 100% selesai -> Tampilkan SS 2 (3 Kolom Grid untuk 25 match R1)
-// 2. Round 1 selesai, masuk R32 / R16 -> Tampilkan 2 Kolom Luas per ronde aktif tanpa scrollbar
-// 3. Masuk Quarterfinals (8 Besar) -> Otomatis beralih ke SS 3 (Playoffs)
+// 1. Turnamen <= 4 ronde (<= 16 tim): Langsung tampilkan tree lengkap 4 kolom (playoffs-view)
+// 2. Turnamen besar (> 4 ronde):
+//    - Round 1 belum 100% selesai (> 8 match) -> Tampilkan SS 2 (3 Kolom Grid untuk penyisihan)
+//    - Round 1 selesai, masuk R32 / R16 -> Tampilkan 2 Kolom Luas per ronde aktif tanpa scrollbar
+//    - Masuk Quarterfinals (8 Besar) -> Otomatis beralih ke SS 3 (Playoffs QF -> SF -> GF)
 // ==============================================================
 const smartAutoView = computed<"round1" | "grid-active" | "playoffs">(() => {
   const matches = tournament.value?.matches || [];
   if (matches.length === 0) return "playoffs";
 
-  // Turnamen kecil (<= 3 ronde) langsung ke playoffs
-  if (rounds.value.length <= 3) {
+  // Turnamen sedang / kecil (<= 4 ronde, misal 12 match R1 -> QF -> SF -> Finals):
+  // Langsung tampilkan tree lengkap (4 kolom) agar seluruh babak terlihat serempak
+  if (rounds.value.length <= 4) {
     return "playoffs";
   }
 
+  // Khusus turnamen besar (> 4 ronde):
   const qfRound = rounds.value.find(
     (r) => r.name.toLowerCase().includes("quarterfinal") || (rounds.value.length >= 3 && r.round === rounds.value.length - 2)
   );
@@ -945,7 +963,7 @@ const smartAutoView = computed<"round1" | "grid-active" | "playoffs">(() => {
     }
   }
 
-  // Jika Round 1 masih ada pertandingan yang belum selesai
+  // Jika Round 1 masih ada pertandingan yang belum selesai dan jumlahnya banyak (> 8 match)
   const r1 = round1Matches.value;
   const isR1Ongoing = r1.length > 8 && r1.some((m) => m.status !== "COMPLETED");
 
@@ -968,6 +986,9 @@ const effectiveView = computed<"round1" | "grid-active" | "playoffs">(() => {
 
 // Indikator Fase Turnamen di Header
 const currentPhaseName = computed(() => {
+  if (rounds.value.length <= 4 && effectiveView.value === "playoffs") {
+    return "🏆 BAGAN RESMI (LENGKAP)";
+  }
   if (effectiveView.value === "round1") {
     return "⚔️ FASE 1: PENYISIHAN (57 TIM)";
   } else if (effectiveView.value === "playoffs") {
